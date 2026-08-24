@@ -78,18 +78,20 @@
   function hideConflictAction() { conflictAction.hidden = true; newSubmissionButton.dataset.confirm = "0"; newSubmissionButton.textContent = "확인 후 현재 화면을 새 제출로 전환"; }
 
   function optionObjects(list) { return (list || []).map(function (item) { return { value:item[0], label:item[0] + " · " + item[1] }; }); }
-  function setSelectOptions(select, options, placeholder, selectedValues) {
+  function setSelectOptions(select, options, placeholder, selectedValues, compactSelected) {
     var selected = Array.isArray(selectedValues) ? selectedValues.map(String) : [String(selectedValues || "")];
     select.innerHTML = "";
     if (!select.multiple && placeholder) select.appendChild(new Option(placeholder, ""));
-    options.forEach(function (option) { var item = new Option(option.label, option.value); item.selected = selected.indexOf(String(option.value)) >= 0; select.appendChild(item); });
+    options.forEach(function (option) { var item = new Option(option.label, option.value); item.dataset.fullLabel = option.label; item.selected = selected.indexOf(String(option.value)) >= 0; select.appendChild(item); });
+    if (compactSelected) compactSelectValue(select);
   }
+  function restoreSelectLabels(select) { Array.from(select.options).forEach(function (option) { if (option.dataset.fullLabel) option.textContent = option.dataset.fullLabel; }); }
+  function compactSelectValue(select) { restoreSelectLabels(select); if (select.value && select.selectedOptions[0]) select.selectedOptions[0].textContent = select.value; }
   function updateDropdownSummary(dropdown) {
     var values = selectedValues(".self", dropdown);
-    var labels = Array.from(dropdown.querySelectorAll("input:checked")).map(function (input) { return input.dataset.label; });
     var toggle = dropdown.querySelector(".multi-dropdown-toggle");
-    toggle.textContent = values.length ? labels.join(", ") : dropdown.dataset.placeholder;
-    toggle.title = values.length ? labels.join(", ") : "";
+    toggle.textContent = values.length ? values.join(", ") : dropdown.dataset.placeholder;
+    toggle.title = values.length ? values.join(", ") : "";
     dropdown.classList.toggle("has-selection", values.length > 0);
   }
 
@@ -151,7 +153,7 @@
 
   async function loadJson(path, message) {
     var url = new URL(path, window.location.href);
-    url.searchParams.set("v", "20260824-4");
+    url.searchParams.set("v", "20260824-5");
     var response = await fetch(url.toString(), { cache:"reload" });
     if (!response.ok) throw new Error(message);
     return response.json();
@@ -204,7 +206,7 @@
     var noMold = article.querySelector(".mold-input").value === "";
     var categories = optionObjects(CATEGORY_OPTIONS[department]);
     if (noMold) categories = categories.filter(function (item) { return item.value === "H"; });
-    setSelectOptions(article.querySelector(".category-select"), categories, department ? "작업구분 선택" : "소속을 먼저 선택", noMold ? "H" : category);
+    setSelectOptions(article.querySelector(".category-select"), categories, "선택", noMold ? "H" : category, true);
     setDropdownOptions(article.querySelector(".classification-select"), optionObjects(CLASSIFICATION_OPTIONS), classifications || []);
     renderCodeOptions(article, codes || []);
     setDropdownOptions(article.querySelector(".equipment-select"), optionObjects(EQUIPMENT_OPTIONS[department]), equipment || []);
@@ -275,8 +277,12 @@
     article.querySelector(".time-plus").addEventListener("click", function () { changeTime(10); });
     timeInput.addEventListener("input", function () { updateTotalMinutes(); scheduleDraftSave(); });
     timeInput.addEventListener("change", normalizeTime);
-    article.querySelector(".category-select").addEventListener("change", function () {
+    var categoryInput = article.querySelector(".category-select");
+    categoryInput.addEventListener("focus", function () { restoreSelectLabels(categoryInput); });
+    categoryInput.addEventListener("blur", function () { compactSelectValue(categoryInput); });
+    categoryInput.addEventListener("change", function () {
       renderCodeOptions(article, selectedValues(".code-select", article));
+      compactSelectValue(categoryInput);
       scheduleDraftSave();
     });
     article.querySelector(".remark-input").addEventListener("input",function (event) { article.querySelector(".remark-count").textContent = event.target.value.length + "/240"; scheduleDraftSave(); });
