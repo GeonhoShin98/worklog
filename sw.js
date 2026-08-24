@@ -1,6 +1,6 @@
 "use strict";
 
-var CACHE_NAME = "field-worklog-v2-20260820";
+var CACHE_NAME = "field-worklog-v4-20260824";
 var APP_SHELL = [
   "./",
   "./index.html",
@@ -8,7 +8,8 @@ var APP_SHELL = [
   "./config.js",
   "./app.js",
   "./manifest.webmanifest",
-  "./data/mold-master.json"
+  "./data/mold-master.json",
+  "./data/employee-master.json"
 ];
 
 self.addEventListener("install", function (event) {

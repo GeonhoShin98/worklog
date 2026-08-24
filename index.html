@@ -44,7 +44,12 @@
             <p>날짜와 작업자를 확인해 주세요.</p>
           </div>
 
-          <div class="identity-grid">
+          <div class="identity-grid identity-grid-primary">
+            <div class="field-group">
+              <label for="workDate">작업일자 <span aria-hidden="true">*</span></label>
+              <input type="date" id="workDate" name="workDate" required>
+            </div>
+
             <div class="field-group">
               <label for="department">소속 <span aria-hidden="true">*</span></label>
               <select id="department" name="department" required>
@@ -52,23 +57,27 @@
                 <option value="사상반">사상반</option>
                 <option value="기계반">기계반</option>
               </select>
-              <p class="field-help">작업구분과 작업코드 목록을 맞추는 데 사용됩니다.</p>
             </div>
 
             <div class="field-group">
-              <label for="workDate">작업일자 <span aria-hidden="true">*</span></label>
-              <input type="date" id="workDate" name="workDate" required>
+              <label for="team">조 <span aria-hidden="true">*</span></label>
+              <select id="team" name="team" required disabled>
+                <option value="">소속을 먼저 선택해 주세요</option>
+              </select>
             </div>
+          </div>
 
+          <div class="identity-grid identity-grid-worker">
             <div class="field-group">
               <label for="workerName">이름 <span aria-hidden="true">*</span></label>
-              <input type="text" id="workerName" name="workerName" maxlength="30" autocomplete="name" placeholder="이름 입력" required>
+              <select id="workerName" name="workerName" required disabled>
+                <option value="">조를 먼저 선택해 주세요</option>
+              </select>
             </div>
 
             <div class="field-group">
-              <label for="employeeId">사번 <span aria-hidden="true">*</span></label>
-              <input type="text" id="employeeId" name="employeeId" inputmode="numeric" autocomplete="off" minlength="9" maxlength="9" pattern="[1-9][0-9]{8}" placeholder="9자리 숫자" aria-describedby="employeeIdHelp" required>
-              <p id="employeeIdHelp" class="field-help">첫 자리가 0이 아닌 숫자 9자리로 입력해 주세요.</p>
+              <label for="employeeId">사번</label>
+              <input type="text" id="employeeId" name="employeeId" inputmode="numeric" autocomplete="off" placeholder="이름 선택 시 자동 표시" readonly aria-readonly="true" required>
             </div>
           </div>
 
@@ -86,7 +95,7 @@
             <div>
               <span class="section-number">02</span>
               <h2 id="tasksTitle">작업 내용</h2>
-              <p>금형번호를 입력하면 차종과 품명을 확인합니다. 비금형 작업은 별도로 표시하세요.</p>
+              <p>금형번호를 입력하면 차종과 품명을 자동으로 표시합니다.</p>
             </div>
             <button type="button" id="addTaskTop" class="button button-secondary button-compact">
               <span aria-hidden="true">＋</span> 작업 추가
@@ -125,34 +134,25 @@
         </div>
 
         <div class="task-body">
-          <label class="no-mold-option">
-            <input type="checkbox" class="no-mold-input">
-            <span>
-              <strong>금형번호 없는 작업</strong>
-              <small>청소·교육·대기 등 금형과 관계없는 작업일 때 선택</small>
-            </span>
-          </label>
-
-          <div class="field-group mold-field">
-            <label class="dynamic-label">금형번호 <span class="required-marker" aria-hidden="true">*</span></label>
-            <div class="mold-input-wrap">
-              <input class="mold-input" type="text" inputmode="numeric" autocomplete="off" minlength="5" maxlength="5" pattern="[0-9]{5}" placeholder="5자리 숫자" required>
-              <span class="lookup-indicator" aria-hidden="true"></span>
+          <div class="mold-process-row">
+            <div class="field-group mold-field">
+              <label class="dynamic-label">금형번호</label>
+              <div class="mold-input-wrap">
+                <input class="mold-input" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="5자리 숫자 또는 빈칸">
+                <span class="lookup-indicator" aria-hidden="true"></span>
+              </div>
+              <p class="lookup-status" role="status" aria-live="polite">미입력 시 작업구분은 기타만 선택할 수 있습니다.</p>
             </div>
-            <p class="lookup-status" role="status" aria-live="polite">5자리 숫자를 입력해 주세요.</p>
-          </div>
 
-          <div class="candidate-field field-group" hidden>
-            <label class="candidate-label">조회 결과 선택 <span aria-hidden="true">*</span></label>
-            <select class="candidate-select">
-              <option value="">차종 · 품명을 선택해 주세요</option>
-            </select>
+            <div class="field-group process-field">
+              <label class="process-label">공정 <span class="optional-label">(중복 선택)</span></label>
+              <div class="multi-dropdown process-select" data-placeholder="공정 선택">
+                <button type="button" class="multi-dropdown-toggle" aria-expanded="false">공정 선택</button>
+                <div class="multi-dropdown-menu" hidden></div>
+              </div>
+              <p class="field-help">선택 시 금형번호-공정 형식으로 저장됩니다.</p>
+            </div>
           </div>
-
-          <label class="unregistered-option" hidden>
-            <input type="checkbox" class="allow-unregistered">
-            <span>금형 기준정보에 없지만 미등록 금형으로 계속</span>
-          </label>
 
           <div class="lookup-result" aria-label="금형 조회 결과">
             <div>
@@ -165,13 +165,7 @@
             </div>
           </div>
 
-          <fieldset class="field-group checkbox-field process-field">
-            <legend>공정 <span class="optional-label">(선택)</span></legend>
-            <p class="field-help process-help">해당하는 공정이 있을 때 모두 선택해 주세요.</p>
-            <div class="chip-grid process-options" aria-label="공정 1부터 9까지"></div>
-          </fieldset>
-
-          <div class="task-two-column">
+          <div class="task-classification-row" aria-label="작업 구분 정보">
             <div class="field-group">
               <label class="category-label">작업구분 <span aria-hidden="true">*</span></label>
               <select class="category-select" required>
@@ -179,6 +173,32 @@
               </select>
             </div>
 
+            <div class="field-group">
+              <label class="classification-label">작업분류 <span class="optional-label">(중복)</span></label>
+              <div class="multi-dropdown classification-select" data-placeholder="작업분류 선택">
+                <button type="button" class="multi-dropdown-toggle" aria-expanded="false">작업분류 선택</button>
+                <div class="multi-dropdown-menu" hidden></div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="code-label">작업코드 <span aria-hidden="true">*</span></label>
+              <div class="multi-dropdown code-select" data-placeholder="작업코드 선택">
+                <button type="button" class="multi-dropdown-toggle" aria-expanded="false">작업코드 선택</button>
+                <div class="multi-dropdown-menu" hidden></div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="equipment-label">장비구분 <span class="optional-label">(중복)</span></label>
+              <div class="multi-dropdown equipment-select" data-placeholder="장비구분 선택">
+                <button type="button" class="multi-dropdown-toggle" aria-expanded="false">장비구분 선택</button>
+                <div class="multi-dropdown-menu" hidden></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="task-two-column">
             <div class="field-group time-field">
               <label class="time-label">시간(분) <span aria-hidden="true">*</span></label>
               <input class="time-input" type="number" inputmode="numeric" min="1" max="1440" step="1" value="30" required>
@@ -189,20 +209,14 @@
                 <button type="button" data-minutes="240">240</button>
               </div>
             </div>
-          </div>
 
-          <fieldset class="field-group checkbox-field code-field">
-            <legend>작업코드 <span aria-hidden="true">*</span></legend>
-            <p class="field-help code-help">소속을 선택하면 코드가 표시됩니다.</p>
-            <div class="chip-grid code-options"></div>
-          </fieldset>
-
-          <div class="field-group">
-            <div class="label-row">
-              <label class="remark-label">비고</label>
-              <span class="remark-count">0/300</span>
+            <div class="field-group">
+              <div class="label-row">
+                <label class="remark-label">비고</label>
+                <span class="remark-count">0/300</span>
+              </div>
+              <textarea class="remark-input" rows="3" maxlength="240" placeholder="특이사항이 있을 때만 입력해 주세요."></textarea>
             </div>
-            <textarea class="remark-input" rows="3" maxlength="300" placeholder="특이사항이 있을 때만 입력해 주세요."></textarea>
           </div>
         </div>
       </article>

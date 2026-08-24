@@ -12,6 +12,7 @@ window.WORKLOG_CONFIG = Object.freeze({
   MOLD_MASTER_SOURCE: "local",
   MOLD_MASTER_FILE: "./data/mold-master.json",
   MOLD_MASTER_TABLE: "mold_master",
+  EMPLOYEE_MASTER_FILE: "./data/employee-master.json",
 
   REQUEST_TIMEOUT_MS: 15000,
   MAX_TASKS: 10,

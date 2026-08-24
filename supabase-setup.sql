@@ -111,7 +111,7 @@ alter table public.worklog
   add constraint worklog_swmno_check check (
     (swmno is null and car is null and part is null)
     or (
-      swmno is not null and swmno ~ '^[0-9]{5}$'
+      swmno is not null and swmno ~ '^[0-9]{5}(-[1-9](,[1-9])*)?$'
       and car is not null and char_length(btrim(car)) between 1 and 120
       and part is not null and char_length(btrim(part)) between 1 and 180
     )
