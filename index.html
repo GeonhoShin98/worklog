@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#173f73">
     <meta name="description" content="현장 작업자가 모바일에서 작업일보를 등록하는 화면입니다.">
-    <title>현장 작업일보</title>
+    <title>금형공장 작업일보</title>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="stylesheet" href="./styles.css">
     <script src="./config.js" defer></script>
@@ -20,8 +20,7 @@
       <div class="header-inner">
         <div>
           <p class="eyebrow">FIELD WORK LOG</p>
-          <h1>현장 작업일보</h1>
-          <p class="header-copy">작업자 정보는 한 번, 작업 내용은 최대 10건까지 등록하세요.</p>
+          <h1>금형공장 작업일보</h1>
         </div>
         <div class="header-mark" aria-hidden="true">일보</div>
       </div>
@@ -150,7 +149,6 @@
                 <button type="button" class="multi-dropdown-toggle" aria-expanded="false">공정 선택</button>
                 <div class="multi-dropdown-menu" hidden></div>
               </div>
-              <p class="field-help">선택 시 금형번호-공정 형식으로 저장됩니다.</p>
             </div>
           </div>
 
@@ -201,12 +199,10 @@
           <div class="task-two-column">
             <div class="field-group time-field">
               <label class="time-label">시간(분) <span aria-hidden="true">*</span></label>
-              <input class="time-input" type="number" inputmode="numeric" min="1" max="1440" step="1" value="30" required>
-              <div class="quick-times" aria-label="빠른 시간 선택">
-                <button type="button" data-minutes="30">30</button>
-                <button type="button" data-minutes="60">60</button>
-                <button type="button" data-minutes="120">120</button>
-                <button type="button" data-minutes="240">240</button>
+              <div class="time-stepper" aria-label="30분 단위 시간 조절">
+                <button type="button" class="time-minus" aria-label="30분 감소">−</button>
+                <input class="time-input" type="number" inputmode="numeric" min="30" max="1440" step="30" value="30" readonly aria-readonly="true" required>
+                <button type="button" class="time-plus" aria-label="30분 증가">＋</button>
               </div>
             </div>
 

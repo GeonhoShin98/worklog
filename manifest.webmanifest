@@ -1,7 +1,7 @@
 {
-  "name": "현장 작업일보",
+  "name": "금형공장 작업일보",
   "short_name": "작업일보",
-  "description": "현장 작업일보 모바일 등록",
+  "description": "금형공장 작업일보 모바일 등록",
   "lang": "ko-KR",
   "start_url": "./",
   "scope": "./",

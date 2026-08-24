@@ -151,7 +151,7 @@
 
   async function loadJson(path, message) {
     var url = new URL(path, window.location.href);
-    url.searchParams.set("v", "20260824-2");
+    url.searchParams.set("v", "20260824-3");
     var response = await fetch(url.toString(), { cache:"reload" });
     if (!response.ok) throw new Error(message);
     return response.json();
@@ -164,6 +164,11 @@
   }
   function populateTeams(selected) {
     var values = Array.from(new Set(employeeMaster.filter(function (w) { return w.department === departmentInput.value; }).map(function (w) { return w.team; })));
+    var preferredOrder = departmentInput.value === "사상반" ? ["A","B","C","D","E","기타"] : ["1","2"];
+    values.sort(function (left, right) {
+      var leftIndex = preferredOrder.indexOf(left), rightIndex = preferredOrder.indexOf(right);
+      return (leftIndex < 0 ? 99 : leftIndex) - (rightIndex < 0 ? 99 : rightIndex) || left.localeCompare(right, "ko");
+    });
     setSelectOptions(teamInput, values.map(function (v) { return { value:v, label:v === "기타" ? v : v + "조" }; }), departmentInput.value ? "조 선택" : "소속을 먼저 선택해 주세요", selected);
     teamInput.disabled = !departmentInput.value;
   }
@@ -185,6 +190,14 @@
   function setLookupState(article, state, message) { var data = taskStates.get(article); if (!data) return; data.lookupState = state; article.dataset.lookup = state; article.querySelector(".lookup-status").textContent = message; }
   function setLookupValues(article, car, part) { var data = taskStates.get(article); if (!data) return; data.car = cleanText(car,120); data.part = cleanText(part,180); article.querySelector(".car-value").textContent = data.car || "—"; article.querySelector(".part-value").textContent = data.part || "—"; }
 
+  function renderCodeOptions(article, selectedCodes) {
+    var category = article.querySelector(".category-select").value;
+    var options = optionObjects(CODE_OPTIONS[departmentInput.value]).filter(function (option) {
+      return category === "H" || !/^[1-8]$/.test(option.value);
+    });
+    setDropdownOptions(article.querySelector(".code-select"), options, selectedCodes || []);
+  }
+
   function renderDepartmentOptions(article, category, codes, classifications, equipment) {
     var department = departmentInput.value;
     var noMold = article.querySelector(".mold-input").value === "";
@@ -192,7 +205,7 @@
     if (noMold) categories = categories.filter(function (item) { return item.value === "H"; });
     setSelectOptions(article.querySelector(".category-select"), categories, department ? "작업구분 선택" : "소속을 먼저 선택", noMold ? "H" : category);
     setDropdownOptions(article.querySelector(".classification-select"), optionObjects(CLASSIFICATION_OPTIONS), classifications || []);
-    setDropdownOptions(article.querySelector(".code-select"), optionObjects(CODE_OPTIONS[department]), codes || []);
+    renderCodeOptions(article, codes || []);
     setDropdownOptions(article.querySelector(".equipment-select"), optionObjects(EQUIPMENT_OPTIONS[department]), equipment || []);
   }
 
@@ -245,8 +258,18 @@
       else if (digits.length) { setLookupValues(article,"",""); setLookupState(article,"idle","금형번호를 5자리까지 입력해 주세요."); }
       scheduleDraftSave();
     });
-    article.querySelector(".time-input").addEventListener("input",function () { updateTotalMinutes(); scheduleDraftSave(); });
-    article.querySelectorAll(".quick-times button").forEach(function (button) { button.addEventListener("click",function () { article.querySelector(".time-input").value = button.dataset.minutes; updateTotalMinutes(); scheduleDraftSave(); }); });
+    var timeInput = article.querySelector(".time-input");
+    function changeTime(delta) {
+      var current = Number(timeInput.value) || 30;
+      timeInput.value = String(Math.min(1440, Math.max(30, current + delta)));
+      updateTotalMinutes(); scheduleDraftSave();
+    }
+    article.querySelector(".time-minus").addEventListener("click", function () { changeTime(-30); });
+    article.querySelector(".time-plus").addEventListener("click", function () { changeTime(30); });
+    article.querySelector(".category-select").addEventListener("change", function () {
+      renderCodeOptions(article, selectedValues(".code-select", article));
+      scheduleDraftSave();
+    });
     article.querySelector(".remark-input").addEventListener("input",function (event) { article.querySelector(".remark-count").textContent = event.target.value.length + "/240"; scheduleDraftSave(); });
     article.addEventListener("change",scheduleDraftSave);
     article.querySelector(".remove-task").addEventListener("click",function () { if (taskList.children.length <= 1) { showStatus("최소 1개의 작업 항목은 유지해야 합니다.","error"); return; } window.clearTimeout(taskStates.get(article).lookupTimer); taskStates.delete(article); article.remove(); updateTaskNumbers(); updateTotalMinutes(); scheduleDraftSave(); });
@@ -277,7 +300,7 @@
       if (!mold && category.value !== "H") { markInvalid(category); errors.push("작업 " + n + "은 금형번호가 없어 작업구분을 기타로 선택해야 합니다."); firstInvalid = firstInvalid || category; }
       if (!category.value) { markInvalid(category); errors.push("작업 " + n + "의 작업구분을 선택해 주세요."); firstInvalid = firstInvalid || category; }
       if (!selectedValues(".code-select",article).length) { markInvalid(code); errors.push("작업 " + n + "의 작업코드를 하나 이상 선택해 주세요."); firstInvalid = firstInvalid || code; }
-      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) { markInvalid(time); errors.push("작업 " + n + "의 시간은 1~1,440분 사이의 정수로 입력해 주세요."); firstInvalid = firstInvalid || time; }
+      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 30 || minutes > 1440 || minutes % 30 !== 0) { markInvalid(time); errors.push("작업 " + n + "의 시간은 30분 단위로 선택해 주세요."); firstInvalid = firstInvalid || time; }
     });
     if (updateTotalMinutes() > Number(CONFIG.MAX_TOTAL_MINUTES || 1440)) { errors.push("이번 등록의 총 작업시간은 1,440분을 넘을 수 없습니다."); firstInvalid = firstInvalid || taskList.querySelector(".time-input"); }
     if (!errors.length) return true;

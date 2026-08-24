@@ -745,29 +745,6 @@ fieldset {
   gap: 18px;
 }
 
-.quick-times {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 7px;
-}
-
-.quick-times button {
-  min-height: 44px;
-  border: 1px solid #c2ceda;
-  border-radius: 8px;
-  background: #f7f9fc;
-  color: #35465b;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.quick-times button:hover {
-  border-color: var(--navy-800);
-  color: var(--navy-900);
-}
-
 .label-row {
   display: flex;
   align-items: center;
@@ -1253,6 +1230,152 @@ select[multiple] option {
   .task-classification-row .field-group:nth-child(4) .multi-dropdown-menu {
     right: 0;
     left: auto;
+  }
+}
+
+.identity-grid-primary {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.75fr);
+  gap: 10px;
+}
+
+.identity-grid-worker {
+  gap: 10px;
+}
+
+.identity-grid .field-group,
+.mold-process-row .field-group,
+.task-classification-row .field-group,
+.task-two-column .field-group {
+  min-width: 0;
+}
+
+.identity-panel .field-group label,
+.task-card .field-group > label,
+.task-card .label-row label {
+  min-height: 20px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.identity-panel input,
+.identity-panel select,
+.task-card input[type="text"],
+.task-card input[type="number"],
+.task-card select,
+.multi-dropdown-toggle {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 14px;
+}
+
+.identity-panel input,
+.identity-panel select,
+.task-card input[type="text"],
+.task-card input[type="number"],
+.task-card select {
+  padding-right: 9px;
+  padding-left: 9px;
+}
+
+.identity-panel input[type="date"] {
+  min-width: 0;
+  padding-right: 4px;
+  padding-left: 6px;
+}
+
+.task-body {
+  gap: 15px;
+}
+
+.task-classification-row .field-group {
+  display: grid;
+  grid-template-rows: 36px auto;
+}
+
+.task-classification-row .category-select {
+  height: 48px;
+}
+
+.task-classification-row label {
+  min-height: 0;
+  font-size: 13px;
+}
+
+.time-stepper {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 6px;
+}
+
+.time-stepper button {
+  min-height: 48px;
+  border: 1px solid #aebdcd;
+  border-radius: var(--radius-sm);
+  background: var(--blue-50);
+  color: var(--navy-900);
+  cursor: pointer;
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.time-stepper button:active {
+  background: var(--blue-100);
+}
+
+.time-stepper .time-input[readonly] {
+  background: #ffffff;
+  color: var(--ink);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .identity-grid-primary {
+    grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr) minmax(0, 0.72fr);
+    gap: 6px;
+  }
+
+  .identity-grid-worker {
+    gap: 7px;
+  }
+
+  .identity-panel .field-group label,
+  .task-card .field-group > label,
+  .task-card .label-row label,
+  .task-classification-row label {
+    font-size: 12px;
+  }
+
+  .identity-panel input,
+  .identity-panel select,
+  .task-card input[type="text"],
+  .task-card input[type="number"],
+  .task-card select,
+  .multi-dropdown-toggle {
+    min-height: 46px;
+    font-size: 12px;
+  }
+
+  .identity-panel input[type="date"] {
+    padding-right: 2px;
+    padding-left: 3px;
+    font-size: 12px;
+  }
+
+  .task-classification-row .field-group {
+    grid-template-rows: 34px auto;
+  }
+
+  .task-classification-row .category-select {
+    height: 46px;
+  }
+
+  .time-stepper {
+    grid-template-columns: 46px minmax(0, 1fr) 46px;
+  }
+
+  .time-stepper button {
+    min-height: 46px;
   }
 }
 
