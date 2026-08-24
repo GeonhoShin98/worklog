@@ -151,7 +151,7 @@
 
   async function loadJson(path, message) {
     var url = new URL(path, window.location.href);
-    url.searchParams.set("v", "20260824-3");
+    url.searchParams.set("v", "20260824-4");
     var response = await fetch(url.toString(), { cache:"reload" });
     if (!response.ok) throw new Error(message);
     return response.json();
@@ -193,7 +193,8 @@
   function renderCodeOptions(article, selectedCodes) {
     var category = article.querySelector(".category-select").value;
     var options = optionObjects(CODE_OPTIONS[departmentInput.value]).filter(function (option) {
-      return category === "H" || !/^[1-8]$/.test(option.value);
+      var numericCode = /^[1-8]$/.test(option.value);
+      return category === "H" ? numericCode : !numericCode;
     });
     setDropdownOptions(article.querySelector(".code-select"), options, selectedCodes || []);
   }
@@ -216,7 +217,7 @@
     var codes = selectedValues(".code-select", article), classes = selectedValues(".classification-select", article), equipment = selectedValues(".equipment-select", article);
     if (!mold) {
       clearDropdown(process); setDropdownDisabled(process, true);
-      setLookupValues(article,"",""); setLookupState(article,"no-mold","금형 미입력 작업입니다. 작업구분은 기타로 고정됩니다.");
+      setLookupValues(article,"",""); setLookupState(article,"no-mold","금형 미입력 작업");
       renderDepartmentOptions(article,"H",codes,classes,equipment); return;
     }
     setDropdownDisabled(process, false); renderDepartmentOptions(article,category,codes,classes,equipment);
@@ -228,7 +229,7 @@
     var record = moldMaster[mold];
     if (Array.isArray(record)) record = record[0];
     if (!record) { setLookupValues(article,"",""); setLookupState(article,"not-found","swmdata에서 금형번호를 찾지 못했습니다."); return; }
-    setLookupValues(article,record.car,record.part); setLookupState(article,"found","swmdata의 첫 번째 일치 내용을 적용했습니다.");
+    setLookupValues(article,record.car,record.part); setLookupState(article,"found","조회 완료");
   }
 
   function configureTaskIds(article, id) {
@@ -261,11 +262,19 @@
     var timeInput = article.querySelector(".time-input");
     function changeTime(delta) {
       var current = Number(timeInput.value) || 30;
-      timeInput.value = String(Math.min(1440, Math.max(30, current + delta)));
+      timeInput.value = String(Math.min(1440, Math.max(10, current + delta)));
       updateTotalMinutes(); scheduleDraftSave();
     }
-    article.querySelector(".time-minus").addEventListener("click", function () { changeTime(-30); });
-    article.querySelector(".time-plus").addEventListener("click", function () { changeTime(30); });
+    function normalizeTime() {
+      var minutes = Number(timeInput.value);
+      if (!Number.isFinite(minutes)) minutes = 10;
+      timeInput.value = String(Math.min(1440, Math.max(10, Math.round(minutes / 10) * 10)));
+      updateTotalMinutes(); scheduleDraftSave();
+    }
+    article.querySelector(".time-minus").addEventListener("click", function () { changeTime(-10); });
+    article.querySelector(".time-plus").addEventListener("click", function () { changeTime(10); });
+    timeInput.addEventListener("input", function () { updateTotalMinutes(); scheduleDraftSave(); });
+    timeInput.addEventListener("change", normalizeTime);
     article.querySelector(".category-select").addEventListener("change", function () {
       renderCodeOptions(article, selectedValues(".code-select", article));
       scheduleDraftSave();
@@ -300,7 +309,7 @@
       if (!mold && category.value !== "H") { markInvalid(category); errors.push("작업 " + n + "은 금형번호가 없어 작업구분을 기타로 선택해야 합니다."); firstInvalid = firstInvalid || category; }
       if (!category.value) { markInvalid(category); errors.push("작업 " + n + "의 작업구분을 선택해 주세요."); firstInvalid = firstInvalid || category; }
       if (!selectedValues(".code-select",article).length) { markInvalid(code); errors.push("작업 " + n + "의 작업코드를 하나 이상 선택해 주세요."); firstInvalid = firstInvalid || code; }
-      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 30 || minutes > 1440 || minutes % 30 !== 0) { markInvalid(time); errors.push("작업 " + n + "의 시간은 30분 단위로 선택해 주세요."); firstInvalid = firstInvalid || time; }
+      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 10 || minutes > 1440 || minutes % 10 !== 0) { markInvalid(time); errors.push("작업 " + n + "의 시간은 10분 단위로 입력해 주세요."); firstInvalid = firstInvalid || time; }
     });
     if (updateTotalMinutes() > Number(CONFIG.MAX_TOTAL_MINUTES || 1440)) { errors.push("이번 등록의 총 작업시간은 1,440분을 넘을 수 없습니다."); firstInvalid = firstInvalid || taskList.querySelector(".time-input"); }
     if (!errors.length) return true;

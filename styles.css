@@ -1254,7 +1254,7 @@ select[multiple] option {
 .task-card .label-row label {
   min-height: 20px;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.35;
 }
 
@@ -1263,10 +1263,11 @@ select[multiple] option {
 .task-card input[type="text"],
 .task-card input[type="number"],
 .task-card select,
+.task-card textarea,
 .multi-dropdown-toggle {
   min-width: 0;
   min-height: 48px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .identity-panel input,
@@ -1288,6 +1289,36 @@ select[multiple] option {
   gap: 15px;
 }
 
+.mold-lookup-block {
+  display: grid;
+  gap: 8px;
+}
+
+#department,
+#team,
+#workerName,
+#employeeId {
+  text-align: center;
+  text-align-last: center;
+}
+
+.multi-dropdown-option {
+  font-size: 14px;
+}
+
+.lookup-result span {
+  font-size: 13px;
+}
+
+.lookup-result strong {
+  font-size: 16px;
+}
+
+.remark-input {
+  height: 48px;
+  min-height: 48px;
+}
+
 .task-classification-row .field-group {
   display: grid;
   grid-template-rows: 36px auto;
@@ -1299,7 +1330,7 @@ select[multiple] option {
 
 .task-classification-row label {
   min-height: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .time-stepper {
@@ -1323,7 +1354,7 @@ select[multiple] option {
   background: var(--blue-100);
 }
 
-.time-stepper .time-input[readonly] {
+.time-stepper .time-input {
   background: #ffffff;
   color: var(--ink);
   text-align: center;
@@ -1343,7 +1374,7 @@ select[multiple] option {
   .task-card .field-group > label,
   .task-card .label-row label,
   .task-classification-row label {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .identity-panel input,
@@ -1351,19 +1382,20 @@ select[multiple] option {
   .task-card input[type="text"],
   .task-card input[type="number"],
   .task-card select,
+  .task-card textarea,
   .multi-dropdown-toggle {
     min-height: 46px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .identity-panel input[type="date"] {
     padding-right: 2px;
     padding-left: 3px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .task-classification-row .field-group {
-    grid-template-rows: 34px auto;
+    grid-template-rows: 40px auto;
   }
 
   .task-classification-row .category-select {
@@ -1375,6 +1407,11 @@ select[multiple] option {
   }
 
   .time-stepper button {
+    min-height: 46px;
+  }
+
+  .remark-input {
+    height: 46px;
     min-height: 46px;
   }
 }

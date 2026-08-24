@@ -133,7 +133,8 @@
         </div>
 
         <div class="task-body">
-          <div class="mold-process-row">
+          <div class="mold-lookup-block">
+            <div class="mold-process-row">
             <div class="field-group mold-field">
               <label class="dynamic-label">금형번호</label>
               <div class="mold-input-wrap">
@@ -150,16 +151,17 @@
                 <div class="multi-dropdown-menu" hidden></div>
               </div>
             </div>
-          </div>
-
-          <div class="lookup-result" aria-label="금형 조회 결과">
-            <div>
-              <span>차종</span>
-              <strong class="car-value">—</strong>
             </div>
-            <div>
-              <span>품명</span>
-              <strong class="part-value">—</strong>
+
+            <div class="lookup-result" aria-label="금형 조회 결과">
+              <div>
+                <span>차종</span>
+                <strong class="car-value">—</strong>
+              </div>
+              <div>
+                <span>품명</span>
+                <strong class="part-value">—</strong>
+              </div>
             </div>
           </div>
 
@@ -199,19 +201,19 @@
           <div class="task-two-column">
             <div class="field-group time-field">
               <label class="time-label">시간(분) <span aria-hidden="true">*</span></label>
-              <div class="time-stepper" aria-label="30분 단위 시간 조절">
-                <button type="button" class="time-minus" aria-label="30분 감소">−</button>
-                <input class="time-input" type="number" inputmode="numeric" min="30" max="1440" step="30" value="30" readonly aria-readonly="true" required>
-                <button type="button" class="time-plus" aria-label="30분 증가">＋</button>
+              <div class="time-stepper" aria-label="10분 단위 시간 조절">
+                <button type="button" class="time-minus" aria-label="10분 감소">−</button>
+                <input class="time-input" type="number" inputmode="numeric" min="10" max="1440" step="10" value="30" required>
+                <button type="button" class="time-plus" aria-label="10분 증가">＋</button>
               </div>
             </div>
 
             <div class="field-group">
               <div class="label-row">
                 <label class="remark-label">비고</label>
-                <span class="remark-count">0/300</span>
+                <span class="remark-count">0/240</span>
               </div>
-              <textarea class="remark-input" rows="3" maxlength="240" placeholder="특이사항이 있을 때만 입력해 주세요."></textarea>
+              <textarea class="remark-input" rows="1" maxlength="240" placeholder="특이사항이 있을 때만 입력해 주세요."></textarea>
             </div>
           </div>
         </div>
