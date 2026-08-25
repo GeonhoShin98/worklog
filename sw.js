@@ -1,6 +1,6 @@
 "use strict";
 
-var CACHE_NAME = "field-worklog-v8-20260825";
+var CACHE_NAME = "field-worklog-v9-20260825";
 var APP_SHELL = [
   "./",
   "./index.html",

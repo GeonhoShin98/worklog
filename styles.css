@@ -1624,6 +1624,172 @@ select[multiple] option {
   }
 }
 
+@media (min-width: 1280px) {
+  .header-inner,
+  .page-shell {
+    width: min(calc(100% - 40px), 1600px);
+    max-width: 1600px;
+  }
+
+  #worklogForm > .identity-panel,
+  .lookup-view {
+    width: min(100%, 900px);
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .tasks-section {
+    margin-top: 22px;
+  }
+
+  .task-list {
+    gap: 10px;
+  }
+
+  .task-card {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .task-card-header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 7px;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    text-align: center;
+  }
+
+  .task-kicker {
+    display: none;
+  }
+
+  .task-title {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .remove-task {
+    min-width: 50px;
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .task-body {
+    grid-template-columns:
+      minmax(132px, 0.95fr)
+      minmax(88px, 0.62fr)
+      minmax(190px, 1.35fr)
+      repeat(4, minmax(82px, 0.62fr))
+      minmax(160px, 1.12fr)
+      minmax(150px, 1.08fr);
+    gap: 6px;
+    align-items: start;
+    padding: 10px;
+  }
+
+  .task-body > .mold-lookup-block,
+  .mold-lookup-block > .mold-process-row,
+  .task-body > .task-classification-row,
+  .task-body > .task-two-column {
+    display: contents;
+  }
+
+  .task-card .field-group {
+    display: grid;
+    grid-template-rows: 32px 44px;
+    align-content: start;
+  }
+
+  .task-card .field-group > label,
+  .task-card .label-row label,
+  .task-classification-row label {
+    min-height: 0;
+    margin-bottom: 4px;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mold-label-row {
+    min-height: 32px;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .mold-label-row .lookup-status {
+    font-size: 10px;
+  }
+
+  .task-card .optional-label,
+  .remark-count {
+    display: none;
+  }
+
+  .task-card input[type="text"],
+  .task-card input[type="number"],
+  .task-card select,
+  .task-card textarea,
+  .multi-dropdown-toggle,
+  .task-classification-row .category-select {
+    height: 44px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .multi-dropdown-toggle {
+    padding-right: 24px;
+    padding-left: 7px;
+  }
+
+  .multi-dropdown-toggle::after {
+    right: 7px;
+  }
+
+  .lookup-result {
+    height: 44px;
+    margin-top: 32px;
+  }
+
+  .lookup-result > div {
+    min-height: 42px;
+    gap: 5px;
+    padding: 4px 7px;
+  }
+
+  .lookup-result span {
+    font-size: 10px;
+  }
+
+  .lookup-result strong {
+    font-size: 12px;
+  }
+
+  .time-stepper {
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 4px;
+  }
+
+  .time-stepper button {
+    min-height: 44px;
+    font-size: 19px;
+  }
+
+  .remark-input {
+    height: 44px;
+    min-height: 44px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    resize: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
