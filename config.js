@@ -7,6 +7,7 @@ window.WORKLOG_CONFIG = Object.freeze({
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_kNJKGSQFF3SgUf_13ESx1Q_HH3v02Bn",
   WORKLOG_TABLE: "worklog",
   WORKLOG_RPC: "submit_worklog_batch",
+  WORKLOG_LOOKUP_RPC: "get_worklog_summary",
 
   /* 현재 Supabase에는 mold_master 테이블이 없어 동봉한 기준정보를 사용합니다. */
   MOLD_MASTER_SOURCE: "local",

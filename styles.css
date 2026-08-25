@@ -136,6 +136,20 @@ summary:focus-visible {
   letter-spacing: -0.08em;
 }
 
+button.header-mark {
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+button.header-mark:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+button.header-mark:active {
+  transform: translateY(1px);
+}
+
 .page-shell {
   width: min(calc(100% - 24px), 900px);
   margin: -20px auto 0;
@@ -1291,15 +1305,47 @@ select[multiple] option {
 
 .mold-lookup-block {
   display: grid;
-  gap: 2px;
+  gap: 0;
+}
+
+.mold-label-row {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+
+.mold-label-row .dynamic-label,
+.mold-label-row .lookup-status {
+  min-height: 0;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.mold-label-row .lookup-status {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #department,
 #team,
 #workerName,
-#employeeId {
+#employeeId,
+#lookupDepartment,
+#lookupTeam,
+#lookupWorkerName,
+#lookupEmployeeId {
   text-align: center;
   text-align-last: center;
+}
+
+#employeeId,
+#lookupEmployeeId {
+  height: 38px;
+  min-height: 38px;
 }
 
 .multi-dropdown-option {
@@ -1312,6 +1358,149 @@ select[multiple] option {
 
 .lookup-result strong {
   font-size: 16px;
+}
+
+.lookup-result {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  border-radius: 9px;
+}
+
+.lookup-result > div {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+}
+
+.lookup-result > div + div {
+  border-top: 0;
+  border-left: 1px solid #c9d7e6;
+}
+
+.lookup-result span {
+  flex: 0 0 auto;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.lookup-result strong {
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.lookup-view {
+  display: grid;
+  gap: 18px;
+}
+
+.lookup-period-grid {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.lookup-identity-primary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lookup-panel input[type="month"] {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 9px;
+  border: 1px solid #bcc8d6;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.lookup-submit {
+  width: 100%;
+  max-width: none;
+  margin-top: 20px;
+}
+
+.lookup-results {
+  margin-top: 18px;
+}
+
+.lookup-results-heading,
+.lookup-results-heading > div {
+  display: flex;
+  align-items: center;
+}
+
+.lookup-results-heading {
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lookup-results-heading > div {
+  gap: 10px;
+}
+
+.lookup-results-heading h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.lookup-results-heading > strong {
+  color: var(--navy-950);
+  font-size: 20px;
+}
+
+.lookup-message {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lookup-message.error {
+  color: var(--red);
+}
+
+.lookup-result-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lookup-result-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid #c9d7e6;
+  border-radius: 10px;
+  background: var(--blue-50);
+}
+
+.lookup-result-list time {
+  color: var(--navy-950);
+  font-weight: 800;
+}
+
+.lookup-result-list span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lookup-result-list strong {
+  min-width: 74px;
+  color: var(--navy-900);
+  font-size: 17px;
+  text-align: right;
 }
 
 .remark-input {
@@ -1413,6 +1602,25 @@ select[multiple] option {
   .remark-input {
     height: 46px;
     min-height: 46px;
+  }
+
+  .lookup-panel input[type="month"] {
+    min-height: 46px;
+    font-size: 14px;
+  }
+
+  .lookup-result-list li {
+    gap: 7px;
+    padding: 9px 10px;
+  }
+
+  .lookup-result-list time {
+    font-size: 14px;
+  }
+
+  .lookup-result-list strong {
+    min-width: 68px;
+    font-size: 16px;
   }
 }
 

@@ -22,7 +22,7 @@
           <p class="eyebrow">FIELD WORK LOG</p>
           <h1>금형공장 작업일보</h1>
         </div>
-        <div class="header-mark" aria-hidden="true">일보</div>
+        <button type="button" id="viewToggle" class="header-mark" aria-label="작업 조회 화면으로 전환" aria-pressed="false">일보</button>
       </div>
     </header>
 
@@ -96,9 +96,6 @@
               <h2 id="tasksTitle">작업 내용</h2>
               <p>금형번호를 입력하면 차종과 품명을 자동으로 표시합니다.</p>
             </div>
-            <button type="button" id="addTaskTop" class="button button-secondary button-compact">
-              <span aria-hidden="true">＋</span> 작업 추가
-            </button>
           </div>
 
           <div id="taskList" class="task-list"></div>
@@ -120,6 +117,77 @@
           </button>
         </div>
       </form>
+
+      <section id="lookupView" class="lookup-view" aria-labelledby="lookupViewTitle" hidden>
+        <form id="lookupForm" novalidate>
+          <section class="panel identity-panel lookup-panel">
+            <div class="section-heading">
+              <div>
+                <span class="section-number">01</span>
+                <h2 id="lookupViewTitle">작업 조회</h2>
+              </div>
+              <p>작업자와 조회 기간을 선택해 주세요.</p>
+            </div>
+
+            <div class="lookup-period-grid">
+              <div class="field-group">
+                <label for="lookupPeriodType">조회구분</label>
+                <select id="lookupPeriodType" required>
+                  <option value="day">작업일자</option>
+                  <option value="month">월별</option>
+                </select>
+              </div>
+              <div class="field-group" id="lookupDayField">
+                <label for="lookupDate">작업일자</label>
+                <input type="date" id="lookupDate" required>
+              </div>
+              <div class="field-group" id="lookupMonthField" hidden>
+                <label for="lookupMonth">조회월</label>
+                <input type="month" id="lookupMonth" required>
+              </div>
+            </div>
+
+            <div class="identity-grid identity-grid-primary lookup-identity-primary">
+              <div class="field-group">
+                <label for="lookupDepartment">소속</label>
+                <select id="lookupDepartment" required><option value="">선택해 주세요</option></select>
+              </div>
+              <div class="field-group">
+                <label for="lookupTeam">조</label>
+                <select id="lookupTeam" required disabled><option value="">소속을 먼저 선택해 주세요</option></select>
+              </div>
+            </div>
+
+            <div class="identity-grid identity-grid-worker">
+              <div class="field-group">
+                <label for="lookupWorkerName">이름</label>
+                <select id="lookupWorkerName" required disabled><option value="">조를 먼저 선택해 주세요</option></select>
+              </div>
+              <div class="field-group compact-id-field">
+                <label for="lookupEmployeeId">사번</label>
+                <input type="text" id="lookupEmployeeId" readonly aria-readonly="true" placeholder="이름 선택 시 자동 표시">
+              </div>
+            </div>
+
+            <button type="submit" id="lookupButton" class="button button-primary lookup-submit">
+              <span class="lookup-button-label">조회하기</span>
+              <span class="button-spinner" aria-hidden="true"></span>
+            </button>
+          </section>
+        </form>
+
+        <section id="lookupResults" class="panel lookup-results" aria-labelledby="lookupResultsTitle" hidden>
+          <div class="lookup-results-heading">
+            <div>
+              <span class="section-number">02</span>
+              <h2 id="lookupResultsTitle">근무시간</h2>
+            </div>
+            <strong id="lookupGrandTotal">0H 0M</strong>
+          </div>
+          <p id="lookupMessage" class="lookup-message" role="status" aria-live="polite"></p>
+          <ul id="lookupResultList" class="lookup-result-list"></ul>
+        </section>
+      </section>
     </main>
 
     <template id="taskTemplate">
@@ -136,12 +204,14 @@
           <div class="mold-lookup-block">
             <div class="mold-process-row">
             <div class="field-group mold-field">
-              <label class="dynamic-label">금형번호</label>
+              <div class="mold-label-row">
+                <label class="dynamic-label">금형번호</label>
+                <span class="lookup-status" role="status" aria-live="polite">미등록 작업</span>
+              </div>
               <div class="mold-input-wrap">
                 <input class="mold-input" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="5자리 숫자 또는 빈칸">
                 <span class="lookup-indicator" aria-hidden="true"></span>
               </div>
-              <p class="lookup-status" role="status" aria-live="polite">미입력 시 작업구분은 기타만 선택할 수 있습니다.</p>
             </div>
 
             <div class="field-group process-field">

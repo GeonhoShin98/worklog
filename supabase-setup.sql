@@ -307,6 +307,55 @@ $$;
 revoke all on function public.submit_worklog_batch(jsonb) from public;
 grant execute on function public.submit_worklog_batch(jsonb) to anon, authenticated;
 
+-- 작업자가 본인의 일별·월별 근무시간 합계를 조회하는 제한된 함수입니다.
+-- 원본 작업 행은 공개하지 않고 날짜별 합계와 작업 건수만 반환합니다.
+create or replace function public.get_worklog_summary(
+  _employee_id bigint,
+  _employee_name text,
+  _date_from date,
+  _date_to date
+)
+returns table (
+  work_date date,
+  total_minutes bigint,
+  task_count bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+begin
+  if _employee_id not between 100000000 and 999999999
+     or _employee_name is null
+     or char_length(btrim(_employee_name)) not between 1 and 30 then
+    raise exception using errcode = '22023', message = '작업자 정보를 확인해 주세요.';
+  end if;
+
+  if _date_from is null
+     or _date_to is null
+     or _date_from > _date_to
+     or (_date_to - _date_from) > 366 then
+    raise exception using errcode = '22023', message = '조회 기간을 확인해 주세요.';
+  end if;
+
+  return query
+  select
+    entry.date as work_date,
+    coalesce(sum(entry.time), 0)::bigint as total_minutes,
+    count(*)::bigint as task_count
+  from public.worklog as entry
+  where entry."Id" = _employee_id
+    and entry.name = btrim(_employee_name)
+    and entry.date between _date_from and _date_to
+  group by entry.date
+  order by entry.date desc;
+end;
+$$;
+
+revoke all on function public.get_worklog_summary(bigint, text, date, date) from public;
+grant execute on function public.get_worklog_summary(bigint, text, date, date) to anon, authenticated;
+
 notify pgrst, 'reload schema';
 
 commit;

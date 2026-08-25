@@ -26,7 +26,6 @@
   var workerNameInput = document.getElementById("workerName");
   var employeeIdInput = document.getElementById("employeeId");
   var rememberInput = document.getElementById("rememberDevice");
-  var addTaskTop = document.getElementById("addTaskTop");
   var addTaskBottom = document.getElementById("addTaskBottom");
   var taskCount = document.getElementById("taskCount");
   var totalMinutes = document.getElementById("totalMinutes");
@@ -36,6 +35,24 @@
   var networkBanner = document.getElementById("networkBanner");
   var conflictAction = document.getElementById("conflictAction");
   var newSubmissionButton = document.getElementById("newSubmissionButton");
+  var viewToggle = document.getElementById("viewToggle");
+  var lookupView = document.getElementById("lookupView");
+  var lookupForm = document.getElementById("lookupForm");
+  var lookupPeriodType = document.getElementById("lookupPeriodType");
+  var lookupDayField = document.getElementById("lookupDayField");
+  var lookupMonthField = document.getElementById("lookupMonthField");
+  var lookupDateInput = document.getElementById("lookupDate");
+  var lookupMonthInput = document.getElementById("lookupMonth");
+  var lookupDepartmentInput = document.getElementById("lookupDepartment");
+  var lookupTeamInput = document.getElementById("lookupTeam");
+  var lookupWorkerNameInput = document.getElementById("lookupWorkerName");
+  var lookupEmployeeIdInput = document.getElementById("lookupEmployeeId");
+  var lookupButton = document.getElementById("lookupButton");
+  var lookupButtonLabel = lookupButton.querySelector(".lookup-button-label");
+  var lookupResults = document.getElementById("lookupResults");
+  var lookupMessage = document.getElementById("lookupMessage");
+  var lookupResultList = document.getElementById("lookupResultList");
+  var lookupGrandTotal = document.getElementById("lookupGrandTotal");
 
   var taskSequence = 0;
   var taskStates = new Map();
@@ -43,6 +60,7 @@
   var employeeMaster = [];
   var draftTimer = null;
   var isSubmitting = false;
+  var isLookingUp = false;
   var configurationValid = true;
   var submissionId = createSubmissionId();
 
@@ -153,7 +171,7 @@
 
   async function loadJson(path, message) {
     var url = new URL(path, window.location.href);
-    url.searchParams.set("v", "20260824-5");
+    url.searchParams.set("v", "20260825-1");
     var response = await fetch(url.toString(), { cache:"reload" });
     if (!response.ok) throw new Error(message);
     return response.json();
@@ -182,6 +200,33 @@
     applySelectedWorker();
   }
   function applySelectedWorker() { employeeIdInput.value = workerNameInput.value || ""; }
+
+  function populateLookupDepartments(selected) {
+    var values = ["사상반", "기계반"];
+    employeeMaster.forEach(function (worker) { if (values.indexOf(worker.department) < 0) values.push(worker.department); });
+    setSelectOptions(lookupDepartmentInput, values.map(function (value) { return { value:value, label:value }; }), "선택해 주세요", selected);
+  }
+  function populateLookupTeams(selected) {
+    var values = Array.from(new Set(employeeMaster.filter(function (worker) { return worker.department === lookupDepartmentInput.value; }).map(function (worker) { return worker.team; })));
+    var preferredOrder = lookupDepartmentInput.value === "사상반" ? ["A","B","C","D","E","기타"] : ["1","2"];
+    values.sort(function (left, right) {
+      var leftIndex = preferredOrder.indexOf(left), rightIndex = preferredOrder.indexOf(right);
+      return (leftIndex < 0 ? 99 : leftIndex) - (rightIndex < 0 ? 99 : rightIndex) || left.localeCompare(right, "ko");
+    });
+    setSelectOptions(lookupTeamInput, values.map(function (value) { return { value:value, label:value === "기타" ? value : value + "조" }; }), lookupDepartmentInput.value ? "조 선택" : "소속을 먼저 선택해 주세요", selected);
+    lookupTeamInput.disabled = !lookupDepartmentInput.value;
+  }
+  function populateLookupWorkers(selectedId) {
+    var workers = employeeMaster.filter(function (worker) { return worker.department === lookupDepartmentInput.value && worker.team === lookupTeamInput.value; });
+    setSelectOptions(lookupWorkerNameInput, workers.map(function (worker) { return { value:worker.employeeId, label:worker.name }; }), lookupTeamInput.value ? "이름 선택" : "조를 먼저 선택해 주세요", selectedId);
+    lookupWorkerNameInput.disabled = !lookupTeamInput.value;
+    lookupEmployeeIdInput.value = lookupWorkerNameInput.value || "";
+  }
+  function syncLookupIdentity() {
+    populateLookupDepartments(departmentInput.value);
+    populateLookupTeams(teamInput.value);
+    populateLookupWorkers(employeeIdInput.value);
+  }
 
   function selectedValues(selector, article) {
     var element = selector === ".self" ? article : article.querySelector(selector);
@@ -219,7 +264,7 @@
     var codes = selectedValues(".code-select", article), classes = selectedValues(".classification-select", article), equipment = selectedValues(".equipment-select", article);
     if (!mold) {
       clearDropdown(process); setDropdownDisabled(process, true);
-      setLookupValues(article,"",""); setLookupState(article,"no-mold","금형 미입력 작업");
+      setLookupValues(article,"",""); setLookupState(article,"no-mold","미등록 작업");
       renderDepartmentOptions(article,"H",codes,classes,equipment); return;
     }
     setDropdownDisabled(process, false); renderDepartmentOptions(article,category,codes,classes,equipment);
@@ -227,11 +272,11 @@
 
   function lookupMold(article) {
     var mold = article.querySelector(".mold-input").value;
-    if (!/^[0-9]{5}$/.test(mold)) { setLookupValues(article,"",""); setLookupState(article,"idle","금형번호는 숫자 5자리여야 합니다."); return; }
+    if (!/^[0-9]{5}$/.test(mold)) { setLookupValues(article,"",""); setLookupState(article,"idle","조회 실패"); return; }
     var record = moldMaster[mold];
     if (Array.isArray(record)) record = record[0];
-    if (!record) { setLookupValues(article,"",""); setLookupState(article,"not-found","swmdata에서 금형번호를 찾지 못했습니다."); return; }
-    setLookupValues(article,record.car,record.part); setLookupState(article,"found","조회 완료");
+    if (!record) { setLookupValues(article,"",""); setLookupState(article,"not-found","조회 실패"); return; }
+    setLookupValues(article,record.car,record.part); setLookupState(article,"found","조회 성공");
   }
 
   function configureTaskIds(article, id) {
@@ -258,7 +303,7 @@
     moldInput.addEventListener("input",function () {
       var digits = moldInput.value.replace(/\D/g,"").slice(0,5); moldInput.value = digits; window.clearTimeout(taskStates.get(article).lookupTimer); updateMoldMode(article,true);
       if (digits.length === 5) taskStates.get(article).lookupTimer = window.setTimeout(function () { lookupMold(article); scheduleDraftSave(); },120);
-      else if (digits.length) { setLookupValues(article,"",""); setLookupState(article,"idle","금형번호를 5자리까지 입력해 주세요."); }
+      else if (digits.length) { setLookupValues(article,"",""); setLookupState(article,"idle","조회 실패"); }
       scheduleDraftSave();
     });
     var timeInput = article.querySelector(".time-input");
@@ -294,7 +339,7 @@
   function updateTaskNumbers() {
     var articles = Array.from(taskList.querySelectorAll(".task-card"));
     articles.forEach(function (article,index) { article.querySelector(".task-title").textContent = "작업 " + (index + 1); var remove = article.querySelector(".remove-task"); remove.hidden = articles.length === 1; remove.setAttribute("aria-label","작업 " + (index + 1) + " 삭제"); });
-    taskCount.textContent = String(articles.length); var atLimit = articles.length >= Number(CONFIG.MAX_TASKS || 10); addTaskTop.disabled = atLimit; addTaskBottom.disabled = atLimit; addTaskBottom.textContent = atLimit ? "작업 항목 최대 10개" : "＋ 작업 항목 추가";
+    taskCount.textContent = String(articles.length); var atLimit = articles.length >= Number(CONFIG.MAX_TASKS || 10); addTaskBottom.disabled = atLimit; addTaskBottom.textContent = atLimit ? "작업 항목 최대 10개" : "＋ 작업 항목 추가";
   }
   function updateTotalMinutes() { var total = Array.from(taskList.querySelectorAll(".time-input")).reduce(function (sum,input) { var value = Number(input.value); return sum + (Number.isFinite(value) && value > 0 ? value : 0); },0); totalMinutes.textContent = String(Math.round(total)); return total; }
   function clearValidationState() { form.querySelectorAll("[aria-invalid='true']").forEach(function (e) { e.removeAttribute("aria-invalid"); }); form.querySelectorAll(".has-error").forEach(function (e) { e.classList.remove("has-error"); }); }
@@ -345,6 +390,91 @@
     try { var response = await fetch(endpoint.toString(),{ method:"POST",headers:{ apikey:CONFIG.SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json",Accept:"application/json" },body:JSON.stringify({_rows:rows}),signal:controller.signal }); if (!response.ok) { var payload = null; try { payload = await response.json(); } catch (e) { payload = null; } var error = new Error(publicErrorMessage(response.status,payload)); error.status = response.status; error.payload = payload; throw error; } return response.json(); }
     finally { window.clearTimeout(timeout); }
   }
+
+  function formatWorkMinutes(value) {
+    var minutes = Math.max(0, Number(value) || 0);
+    return Math.floor(minutes / 60) + "H " + (minutes % 60) + "M";
+  }
+  function formatWorkDate(value) {
+    var parts = String(value || "").split("-");
+    if (parts.length !== 3) return String(value || "");
+    var dayNames = ["일","월","화","수","목","금","토"];
+    var date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return parts[0] + "." + parts[1] + "." + parts[2] + " (" + dayNames[date.getDay()] + ")";
+  }
+  function lookupRange() {
+    if (lookupPeriodType.value === "month") {
+      var parts = lookupMonthInput.value.split("-").map(Number);
+      if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+      var lastDay = new Date(parts[0], parts[1], 0).getDate();
+      return { from:lookupMonthInput.value + "-01", to:lookupMonthInput.value + "-" + String(lastDay).padStart(2,"0") };
+    }
+    return lookupDateInput.value ? { from:lookupDateInput.value, to:lookupDateInput.value } : null;
+  }
+  function updateLookupPeriodFields() {
+    var monthly = lookupPeriodType.value === "month";
+    lookupDayField.hidden = monthly; lookupDateInput.disabled = monthly;
+    lookupMonthField.hidden = !monthly; lookupMonthInput.disabled = !monthly;
+  }
+  function setLookupLoading(value) {
+    isLookingUp = value;
+    lookupButton.disabled = value || !navigator.onLine || !configurationValid;
+    lookupButton.classList.toggle("is-loading", value);
+    lookupButtonLabel.textContent = value ? "조회 중" : "조회하기";
+  }
+  function renderLookupRows(rows) {
+    lookupResultList.replaceChildren();
+    var total = rows.reduce(function (sum, row) { return sum + (Number(row.total_minutes) || 0); }, 0);
+    lookupGrandTotal.textContent = formatWorkMinutes(total);
+    lookupResults.hidden = false;
+    lookupMessage.className = "lookup-message";
+    if (!rows.length) {
+      lookupMessage.textContent = "선택한 기간에 등록된 작업이 없습니다.";
+      return;
+    }
+    lookupMessage.textContent = rows.length + "일의 근무시간을 조회했습니다.";
+    rows.forEach(function (row) {
+      var item = document.createElement("li"), date = document.createElement("time"), meta = document.createElement("span"), duration = document.createElement("strong");
+      date.dateTime = row.work_date; date.textContent = formatWorkDate(row.work_date);
+      meta.textContent = Number(row.task_count || 0) + "건";
+      duration.textContent = formatWorkMinutes(row.total_minutes);
+      item.appendChild(date); item.appendChild(meta); item.appendChild(duration); lookupResultList.appendChild(item);
+    });
+  }
+  function lookupErrorMessage(status, payload) {
+    var code = payload && payload.code ? payload.code : "";
+    if (status === 401 || status === 403 || code === "42501") return "조회 권한이 없습니다. 최신 Supabase 설정 SQL을 실행해 주세요.";
+    if (status === 404 || code === "PGRST202") return "조회 기능 설정이 필요합니다. 최신 Supabase 설정 SQL을 실행해 주세요.";
+    return "조회하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.";
+  }
+  async function requestLookupSummary(employee, range) {
+    var controller = new AbortController(), timeout = window.setTimeout(function () { controller.abort(); }, Number(CONFIG.REQUEST_TIMEOUT_MS) || 15000), endpoint = new URL("/rest/v1/rpc/" + encodeURIComponent(CONFIG.WORKLOG_LOOKUP_RPC), CONFIG.SUPABASE_URL);
+    try {
+      var response = await fetch(endpoint.toString(), { method:"POST", headers:{ apikey:CONFIG.SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json",Accept:"application/json" }, body:JSON.stringify({_employee_id:Number(employee.employeeId),_employee_name:employee.name,_date_from:range.from,_date_to:range.to}), signal:controller.signal });
+      if (!response.ok) { var payload = null; try { payload = await response.json(); } catch (e) { payload = null; } var error = new Error(lookupErrorMessage(response.status,payload)); error.status = response.status; error.payload = payload; throw error; }
+      return response.json();
+    } finally { window.clearTimeout(timeout); }
+  }
+  async function handleLookup(event) {
+    event.preventDefault();
+    lookupResults.hidden = false; lookupResultList.replaceChildren(); lookupGrandTotal.textContent = "0H 0M"; lookupMessage.className = "lookup-message";
+    if (!navigator.onLine) { lookupMessage.textContent = "온라인 연결 후 조회해 주세요."; lookupMessage.classList.add("error"); return; }
+    var employee = employeeMaster.find(function (worker) { return worker.employeeId === lookupWorkerNameInput.value; }), range = lookupRange();
+    if (!employee || !range) { lookupMessage.textContent = "조회 기간과 작업자를 모두 선택해 주세요."; lookupMessage.classList.add("error"); return; }
+    setLookupLoading(true); lookupMessage.textContent = "근무시간을 조회하고 있습니다.";
+    try { renderLookupRows(await requestLookupSummary(employee, range)); }
+    catch (error) { lookupMessage.textContent = error.name === "AbortError" ? "조회 응답 시간이 초과되었습니다. 다시 시도해 주세요." : error.message; lookupMessage.classList.add("error"); console.error("Worklog lookup failed", {status:error.status || null,code:error.payload && error.payload.code ? error.payload.code : null}); }
+    finally { setLookupLoading(false); }
+  }
+  function switchView() {
+    var showLookup = lookupView.hidden;
+    if (showLookup) { saveDraft(); syncLookupIdentity(); }
+    form.hidden = showLookup; lookupView.hidden = !showLookup; conflictAction.hidden = true; hideStatus();
+    viewToggle.textContent = showLookup ? "조회" : "일보";
+    viewToggle.setAttribute("aria-pressed", String(showLookup));
+    viewToggle.setAttribute("aria-label", showLookup ? "작업일보 작성 화면으로 전환" : "작업 조회 화면으로 전환");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
   function setSubmitting(value) { isSubmitting = value; submitButton.classList.toggle("is-loading",value); submitButton.disabled = value || !navigator.onLine || !configurationValid; submitButtonLabel.textContent = value ? "등록 중" : "작업일보 등록"; }
   function resetTasksAfterSuccess() { taskStates.forEach(function (state) { window.clearTimeout(state.lookupTimer); }); taskStates.clear(); taskList.innerHTML = ""; submissionId = createSubmissionId(); createTask(); storageRemove(sessionStorage,STORAGE_KEYS.sessionDraft); storageRemove(localStorage,STORAGE_KEYS.localDraft); hideConflictAction(); }
   async function handleSubmit(event) {
@@ -376,12 +506,12 @@
     workDateInput.value = draft.date || getKoreanToday(); if (Array.isArray(draft.tasks)) draft.tasks.slice(0,Number(CONFIG.MAX_TASKS || 10)).forEach(createTask); showStatus("저장된 작성 내용을 복원했습니다. 입력값을 확인해 주세요.","info"); return true;
   }
   function refreshTaskDepartmentOptions() { Array.from(taskList.querySelectorAll(".task-card")).forEach(function (article) { renderDepartmentOptions(article,"",[],selectedValues(".classification-select",article),[]); updateMoldMode(article,true); }); }
-  function updateNetworkState() { var online = navigator.onLine; networkBanner.hidden = online; if (!isSubmitting) { submitButton.disabled = !online || !configurationValid; submitButtonLabel.textContent = !configurationValid ? "연결 설정 확인 필요" : online ? "작업일보 등록" : "온라인 연결 필요"; } if (online && appStatus.classList.contains("error") && /오프라인/.test(appStatus.textContent)) hideStatus(); }
-  function validateConfiguration() { try { var url = new URL(CONFIG.SUPABASE_URL); return url.protocol === "https:" && /^sb_publishable_/.test(CONFIG.SUPABASE_PUBLISHABLE_KEY || "") && Boolean(CONFIG.WORKLOG_RPC); } catch (e) { return false; } }
+  function updateNetworkState() { var online = navigator.onLine; networkBanner.hidden = online; if (!isSubmitting) { submitButton.disabled = !online || !configurationValid; submitButtonLabel.textContent = !configurationValid ? "연결 설정 확인 필요" : online ? "작업일보 등록" : "온라인 연결 필요"; } if (!isLookingUp) { lookupButton.disabled = !online || !configurationValid; lookupButtonLabel.textContent = !configurationValid ? "연결 설정 확인 필요" : online ? "조회하기" : "온라인 연결 필요"; } if (online && appStatus.classList.contains("error") && /오프라인/.test(appStatus.textContent)) hideStatus(); }
+  function validateConfiguration() { try { var url = new URL(CONFIG.SUPABASE_URL); return url.protocol === "https:" && /^sb_publishable_/.test(CONFIG.SUPABASE_PUBLISHABLE_KEY || "") && Boolean(CONFIG.WORKLOG_RPC) && Boolean(CONFIG.WORKLOG_LOOKUP_RPC); } catch (e) { return false; } }
   function registerServiceWorker() { if (!("serviceWorker" in navigator) || (location.protocol !== "https:" && location.hostname !== "localhost")) return; navigator.serviceWorker.register("./sw.js").catch(function (e) { console.warn("Service worker registration failed",e); }); }
 
   async function initialize() {
-    var today = getKoreanToday(); workDateInput.value = today; workDateInput.min = shiftIsoDate(today,-31); workDateInput.max = shiftIsoDate(today,1);
+    var today = getKoreanToday(); workDateInput.value = today; workDateInput.min = shiftIsoDate(today,-31); workDateInput.max = shiftIsoDate(today,1); lookupDateInput.value = today; lookupMonthInput.value = today.slice(0,7); updateLookupPeriodFields();
     var loadErrors = [];
     try {
       var moldPayload = await loadJson(CONFIG.MOLD_MASTER_FILE,"금형 기준정보를 불러오지 못했습니다.");
@@ -394,11 +524,18 @@
       if (!employeeMaster.length) throw new Error("작업자 기준정보가 비어 있습니다.");
     } catch (employeeError) { loadErrors.push(employeeError.message); }
     populateDepartments("");
+    populateLookupDepartments("");
     if (loadErrors.length) { showStatus(loadErrors.join(" ") + " 배포 파일을 확인해 주세요.","error"); configurationValid = false; }
     var restored = loadRestoredState(); if (!restored || !taskList.children.length) createTask(); configurationValid = configurationValid && validateConfiguration(); if (!configurationValid && appStatus.hidden) showStatus("Supabase 연결 또는 기준정보 설정을 확인해 주세요.","error");
-    addTaskTop.addEventListener("click",function () { var article = createTask(); if (article) { article.scrollIntoView({behavior:"smooth",block:"start"}); article.querySelector(".mold-input").focus({preventScroll:true}); scheduleDraftSave(); } }); addTaskBottom.addEventListener("click",function () { addTaskTop.click(); });
+    addTaskBottom.addEventListener("click",function () { var article = createTask(); if (article) { article.scrollIntoView({behavior:"smooth",block:"start"}); article.querySelector(".mold-input").focus({preventScroll:true}); scheduleDraftSave(); } });
     departmentInput.addEventListener("change",function () { populateTeams(""); populateWorkers("",""); refreshTaskDepartmentOptions(); scheduleDraftSave(); }); teamInput.addEventListener("change",function () { populateWorkers("",""); scheduleDraftSave(); }); workerNameInput.addEventListener("change",function () { applySelectedWorker(); scheduleDraftSave(); }); workDateInput.addEventListener("input",scheduleDraftSave);
     rememberInput.addEventListener("change",function () { saveDraft(); showStatus(rememberInput.checked ? "작업자 정보와 작성 중 내용을 이 기기에 7일간 저장합니다." : "7일 보관 자료를 삭제했습니다.","info"); });
+    viewToggle.addEventListener("click", switchView);
+    lookupPeriodType.addEventListener("change", updateLookupPeriodFields);
+    lookupDepartmentInput.addEventListener("change", function () { populateLookupTeams(""); populateLookupWorkers(""); });
+    lookupTeamInput.addEventListener("change", function () { populateLookupWorkers(""); });
+    lookupWorkerNameInput.addEventListener("change", function () { lookupEmployeeIdInput.value = lookupWorkerNameInput.value || ""; });
+    lookupForm.addEventListener("submit", handleLookup);
     newSubmissionButton.addEventListener("click",function () { if (newSubmissionButton.dataset.confirm !== "1") { newSubmissionButton.dataset.confirm = "1"; newSubmissionButton.textContent = "기존 등록 확인 완료 — 새 제출 ID 만들기"; showStatus("기존 등록 내역을 확인했다면 버튼을 한 번 더 눌러 주세요.","info"); focusStatus(); return; } submissionId = createSubmissionId(); hideConflictAction(); scheduleDraftSave(); showStatus("현재 화면을 새 제출로 전환했습니다.","info"); focusStatus(); });
     document.addEventListener("click", function (event) { if (!event.target.closest(".multi-dropdown")) closeOtherDropdowns(null); });
     document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeOtherDropdowns(null); });
