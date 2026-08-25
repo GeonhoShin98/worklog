@@ -30,11 +30,18 @@ Netlify에 그대로 올릴 수 있는 정적 웹사이트입니다. 기존 Wind
 
 ## 금형 기준정보
 
-현재 Supabase 프로젝트에는 기존 HTML이 조회하던 `mold_master` 테이블이 없습니다. 그래서 업로드한 `swmdata.XLSX`에서 추출한 `data/mold-master.json`을 사용하도록 설정했습니다. 이 파일은 1,048개 금형 앞번호를 포함하며, 같은 앞번호가 반복되면 파일에서 처음 나타난 차종코드·내역을 적용합니다.
+`data/master-data.xlsx`가 작업자와 금형 기준정보의 기본 원본입니다. Excel에서 아래 두 시트의 표를 수정하고 파일명을 유지한 채 Netlify에 다시 배포하면 웹에 바로 반영됩니다.
+
+- `작업자` 시트: 이름, 소속, 조, 사번
+- `금형` 시트: 금형번호, 차종, 품명
+
+금형번호는 앞 5자리를 사용하며 같은 번호가 반복되면 Excel 표에서 처음 나타난 내용을 적용합니다. 제목 행과 열 이름은 변경하지 말고 표의 데이터 행만 수정해 주세요. 사번과 금형번호는 앞자리 유실을 막기 위해 텍스트 형식을 유지하는 것이 안전합니다.
+
+현재 Supabase 프로젝트에는 기존 HTML이 조회하던 `mold_master` 테이블이 없습니다. 웹은 `master-data.xlsx`를 우선 읽고, 파일 손상이나 누락 시에만 기존 `employee-master.json`과 `mold-master.json`을 예비 데이터로 사용합니다.
 
 기준정보를 갱신할 때는 새 `swmdata.XLSX`로 `data/mold-master.json`을 다시 생성하거나, 별도 `mold_master` 테이블을 만든 뒤 `config.js`의 `MOLD_MASTER_SOURCE`를 `supabase`로 바꿀 수 있습니다.
 
-업로드한 `iddata.xlsx`의 작업자 63명을 `data/employee-master.json`에 포함했습니다. Netlify 정적 배포에서는 이 파일의 이름·사번을 사이트 방문자가 내려받을 수 있으므로, 외부 공개 URL이라면 운영 전에 Supabase Auth와 보호된 조회 함수로 옮기는 것을 권장합니다.
+업로드한 `iddata.xlsx`의 작업자 63명을 Excel과 예비 JSON에 포함했습니다. Netlify 정적 배포에서는 Excel과 JSON의 이름·사번을 사이트 방문자가 내려받을 수 있으므로, 외부 공개 URL이라면 운영 전에 Supabase Auth와 보호된 조회 함수로 옮기는 것을 권장합니다.
 
 ## 중요한 보안 안내
 

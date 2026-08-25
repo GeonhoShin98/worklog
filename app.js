@@ -171,10 +171,79 @@
 
   async function loadJson(path, message) {
     var url = new URL(path, window.location.href);
-    url.searchParams.set("v", "20260825-1");
+    url.searchParams.set("v", "20260825-2");
     var response = await fetch(url.toString(), { cache:"reload" });
     if (!response.ok) throw new Error(message);
     return response.json();
+  }
+
+  function parseSpreadsheetXml(text) {
+    var xml = new DOMParser().parseFromString(text, "application/xml");
+    if (xml.getElementsByTagName("parsererror").length) throw new Error("Excel 파일 형식을 읽을 수 없습니다.");
+    return xml;
+  }
+  function spreadsheetElements(root, localName) { return Array.from(root.getElementsByTagNameNS("*", localName)); }
+  function spreadsheetColumnIndex(reference) {
+    var letters = String(reference || "").match(/^[A-Z]+/i), index = 0;
+    if (!letters) return -1;
+    Array.from(letters[0].toUpperCase()).forEach(function (letter) { index = index * 26 + letter.charCodeAt(0) - 64; });
+    return index - 1;
+  }
+  function spreadsheetRows(xml, sharedStrings) {
+    return spreadsheetElements(xml, "row").map(function (row) {
+      var values = [];
+      spreadsheetElements(row, "c").forEach(function (cell) {
+        var index = spreadsheetColumnIndex(cell.getAttribute("r")), type = cell.getAttribute("t"), value = "";
+        if (type === "inlineStr") value = spreadsheetElements(cell, "t").map(function (node) { return node.textContent || ""; }).join("");
+        else { var raw = spreadsheetElements(cell, "v")[0]; value = raw ? raw.textContent || "" : ""; if (type === "s") value = sharedStrings[Number(value)] || ""; }
+        if (index >= 0) values[index] = value;
+      });
+      return values.map(function (value) { return cleanText(value, 300); });
+    });
+  }
+  function rowsAfterHeader(rows, headers) {
+    var headerIndex = rows.findIndex(function (row) { return headers.every(function (header) { return row.indexOf(header) >= 0; }); });
+    if (headerIndex < 0) throw new Error("Excel 기준정보의 열 이름을 확인해 주세요.");
+    var indexes = {}; headers.forEach(function (header) { indexes[header] = rows[headerIndex].indexOf(header); });
+    return { indexes:indexes, rows:rows.slice(headerIndex + 1).filter(function (row) { return row.some(Boolean); }) };
+  }
+  async function loadMasterWorkbook(path) {
+    if (!window.JSZip) throw new Error("Excel 읽기 구성요소를 불러오지 못했습니다.");
+    var url = new URL(path, window.location.href); url.searchParams.set("v", "20260825-2");
+    var response = await fetch(url.toString(), { cache:"reload" });
+    if (!response.ok) throw new Error("Excel 기준정보를 불러오지 못했습니다.");
+    var zip = await window.JSZip.loadAsync(await response.arrayBuffer());
+    async function zipText(fileName) { var file = zip.file(fileName); if (!file) throw new Error("Excel 기준정보 시트를 찾지 못했습니다."); return file.async("string"); }
+    var sharedStrings = [];
+    if (zip.file("xl/sharedStrings.xml")) {
+      var sharedXml = parseSpreadsheetXml(await zipText("xl/sharedStrings.xml"));
+      sharedStrings = spreadsheetElements(sharedXml, "si").map(function (item) { return spreadsheetElements(item, "t").map(function (node) { return node.textContent || ""; }).join(""); });
+    }
+    var workbookXml = parseSpreadsheetXml(await zipText("xl/workbook.xml"));
+    var relationXml = parseSpreadsheetXml(await zipText("xl/_rels/workbook.xml.rels")), relationTargets = {};
+    spreadsheetElements(relationXml, "Relationship").forEach(function (relation) { relationTargets[relation.getAttribute("Id")] = relation.getAttribute("Target"); });
+    var sheets = {};
+    for (var sheet of spreadsheetElements(workbookXml, "sheet")) {
+      var relationId = sheet.getAttribute("r:id") || sheet.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id"), target = relationTargets[relationId] || "";
+      var sheetPath = target.indexOf("/xl/") === 0 ? target.slice(1) : "xl/" + target.replace(/^\.\.\//, "");
+      sheets[sheet.getAttribute("name")] = spreadsheetRows(parseSpreadsheetXml(await zipText(sheetPath)), sharedStrings);
+    }
+    var employeeData = rowsAfterHeader(sheets["작업자"] || [], ["이름","소속","조","사번"]), workers = [], employeeIds = new Set();
+    employeeData.rows.forEach(function (row, index) {
+      var worker = { name:cleanText(row[employeeData.indexes["이름"]],30), department:cleanText(row[employeeData.indexes["소속"]],20), team:cleanText(row[employeeData.indexes["조"]],10), employeeId:cleanText(row[employeeData.indexes["사번"]],20) };
+      if (!worker.name && !worker.department && !worker.team && !worker.employeeId) return;
+      if (!worker.name || !worker.department || !worker.team || !/^[1-9][0-9]{8}$/.test(worker.employeeId) || employeeIds.has(worker.employeeId)) throw new Error("작업자 시트 " + (index + 5) + "행을 확인해 주세요.");
+      employeeIds.add(worker.employeeId); workers.push(worker);
+    });
+    var moldData = rowsAfterHeader(sheets["금형"] || [], ["금형번호","차종","품명"]), records = {};
+    moldData.rows.forEach(function (row, index) {
+      var mold = cleanText(row[moldData.indexes["금형번호"]],20).match(/[0-9]{5}/), car = cleanText(row[moldData.indexes["차종"]],120), part = cleanText(row[moldData.indexes["품명"]],180);
+      if (!mold && !car && !part) return;
+      if (!mold || !car || !part) throw new Error("금형 시트 " + (index + 5) + "행을 확인해 주세요.");
+      if (!records[mold[0]]) records[mold[0]] = { car:car, part:part };
+    });
+    if (!workers.length || !Object.keys(records).length) throw new Error("Excel 기준정보가 비어 있습니다.");
+    return { workers:workers, records:records };
   }
 
   function populateDepartments(selected) {
@@ -514,15 +583,13 @@
     var today = getKoreanToday(); workDateInput.value = today; workDateInput.min = shiftIsoDate(today,-31); workDateInput.max = shiftIsoDate(today,1); lookupDateInput.value = today; lookupMonthInput.value = today.slice(0,7); updateLookupPeriodFields();
     var loadErrors = [];
     try {
-      var moldPayload = await loadJson(CONFIG.MOLD_MASTER_FILE,"금형 기준정보를 불러오지 못했습니다.");
-      moldMaster = moldPayload.records || {};
-      if (!Object.keys(moldMaster).length) throw new Error("금형 기준정보가 비어 있습니다.");
-    } catch (moldError) { loadErrors.push(moldError.message); }
-    try {
-      var employeePayload = await loadJson(CONFIG.EMPLOYEE_MASTER_FILE,"작업자 기준정보를 불러오지 못했습니다.");
-      employeeMaster = employeePayload.workers || [];
-      if (!employeeMaster.length) throw new Error("작업자 기준정보가 비어 있습니다.");
-    } catch (employeeError) { loadErrors.push(employeeError.message); }
+      var masterPayload = await loadMasterWorkbook(CONFIG.MASTER_DATA_FILE);
+      moldMaster = masterPayload.records; employeeMaster = masterPayload.workers;
+    } catch (masterError) {
+      console.warn("Excel master data unavailable; using JSON fallback", masterError);
+      try { var moldPayload = await loadJson(CONFIG.MOLD_MASTER_FILE,"금형 기준정보를 불러오지 못했습니다."); moldMaster = moldPayload.records || {}; if (!Object.keys(moldMaster).length) throw new Error("금형 기준정보가 비어 있습니다."); } catch (moldError) { loadErrors.push(moldError.message); }
+      try { var employeePayload = await loadJson(CONFIG.EMPLOYEE_MASTER_FILE,"작업자 기준정보를 불러오지 못했습니다."); employeeMaster = employeePayload.workers || []; if (!employeeMaster.length) throw new Error("작업자 기준정보가 비어 있습니다."); } catch (employeeError) { loadErrors.push(employeeError.message); }
+    }
     populateDepartments("");
     populateLookupDepartments("");
     if (loadErrors.length) { showStatus(loadErrors.join(" ") + " 배포 파일을 확인해 주세요.","error"); configurationValid = false; }

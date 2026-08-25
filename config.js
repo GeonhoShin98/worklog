@@ -11,6 +11,7 @@ window.WORKLOG_CONFIG = Object.freeze({
 
   /* 현재 Supabase에는 mold_master 테이블이 없어 동봉한 기준정보를 사용합니다. */
   MOLD_MASTER_SOURCE: "local",
+  MASTER_DATA_FILE: "./data/master-data.xlsx",
   MOLD_MASTER_FILE: "./data/mold-master.json",
   MOLD_MASTER_TABLE: "mold_master",
   EMPLOYEE_MASTER_FILE: "./data/employee-master.json",

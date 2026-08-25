@@ -1042,7 +1042,19 @@ select[multiple] option {
 }
 
 .process-select {
-  height: 132px;
+  height: auto;
+}
+
+@media (max-width: 1279px) {
+  .mold-lookup-block {
+    gap: 0;
+  }
+
+  .mold-process-row,
+  .lookup-result {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
 }
 
 .task-classification-row {
