@@ -53,7 +53,7 @@
             <div class="field-group">
               <label for="department">소속 <span aria-hidden="true">*</span></label>
               <select id="department" name="department" required>
-                <option value="">선택해 주세요</option>
+                <option value="">선택</option>
                 <option value="사상반">사상반</option>
                 <option value="기계반">기계반</option>
               </select>
@@ -62,7 +62,7 @@
             <div class="field-group">
               <label for="team">조 <span aria-hidden="true">*</span></label>
               <select id="team" name="team" required disabled>
-                <option value="">소속을 먼저 선택해 주세요</option>
+                <option value="">선택</option>
               </select>
             </div>
           </div>
@@ -71,13 +71,13 @@
             <div class="field-group">
               <label for="workerName">이름 <span aria-hidden="true">*</span></label>
               <select id="workerName" name="workerName" required disabled>
-                <option value="">조를 먼저 선택해 주세요</option>
+                <option value="">선택</option>
               </select>
             </div>
 
             <div class="field-group">
               <label for="employeeId">사번</label>
-              <input type="text" id="employeeId" name="employeeId" inputmode="numeric" autocomplete="off" placeholder="이름 선택 시 자동 표시" readonly aria-readonly="true" required>
+              <input type="text" id="employeeId" name="employeeId" inputmode="numeric" autocomplete="off" placeholder="자동 표시" readonly aria-readonly="true" required>
             </div>
           </div>
 
@@ -99,6 +99,7 @@
             </div>
           </div>
 
+          <p class="mobile-task-help">작업을 추가하면 이전 항목은 요약으로 접힙니다. 제목을 누르면 다시 수정할 수 있습니다.</p>
           <div id="taskList" class="task-list"></div>
 
           <button type="button" id="addTaskBottom" class="button button-add-wide">
@@ -151,22 +152,22 @@
             <div class="identity-grid identity-grid-primary lookup-identity-primary">
               <div class="field-group">
                 <label for="lookupDepartment">소속</label>
-                <select id="lookupDepartment" required><option value="">선택해 주세요</option></select>
+                <select id="lookupDepartment" required><option value="">선택</option></select>
               </div>
               <div class="field-group">
                 <label for="lookupTeam">조</label>
-                <select id="lookupTeam" required disabled><option value="">소속을 먼저 선택해 주세요</option></select>
+                <select id="lookupTeam" required disabled><option value="">선택</option></select>
               </div>
             </div>
 
             <div class="identity-grid identity-grid-worker">
               <div class="field-group">
                 <label for="lookupWorkerName">이름</label>
-                <select id="lookupWorkerName" required disabled><option value="">조를 먼저 선택해 주세요</option></select>
+                <select id="lookupWorkerName" required disabled><option value="">선택</option></select>
               </div>
               <div class="field-group compact-id-field">
                 <label for="lookupEmployeeId">사번</label>
-                <input type="text" id="lookupEmployeeId" readonly aria-readonly="true" placeholder="이름 선택 시 자동 표시">
+                <input type="text" id="lookupEmployeeId" readonly aria-readonly="true" placeholder="자동 표시">
               </div>
             </div>
 
@@ -194,9 +195,15 @@
     <template id="taskTemplate">
       <article class="task-card">
         <div class="task-card-header">
-          <div>
+          <div class="task-heading">
             <p class="task-kicker">WORK ITEM</p>
-            <h3 class="task-title">작업 1</h3>
+            <h3 class="task-title">
+              <button type="button" class="task-toggle" aria-expanded="true">
+                <span class="task-number">작업 1</span>
+                <span class="task-summary"></span>
+                <span class="task-toggle-label">접기</span>
+              </button>
+            </h3>
           </div>
           <button type="button" class="remove-task" aria-label="작업 항목 삭제">삭제</button>
         </div>
@@ -240,7 +247,7 @@
             <div class="field-group">
               <label class="category-label">작업구분 <span aria-hidden="true">*</span></label>
               <select class="category-select" required>
-                <option value="">소속을 먼저 선택해 주세요</option>
+                <option value="">선택</option>
               </select>
             </div>
 
@@ -286,6 +293,10 @@
               </div>
               <textarea class="remark-input" rows="1" maxlength="240" placeholder="특이사항 입력"></textarea>
             </div>
+          </div>
+          <div class="task-mobile-actions">
+            <button type="button" class="button button-secondary collapse-task">요약으로 접기</button>
+            <button type="button" class="button button-secondary add-next-task">＋ 다음 작업</button>
           </div>
         </div>
       </article>
