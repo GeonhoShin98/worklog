@@ -1,5 +1,8 @@
 # 사번·PIN 작업일보 — 배포 안내
 
+2026-11-03 운영 배포와 실제 로그인·등록·조회 검증을 완료했습니다.
+현재 적용 상태, 데이터 수량, 남은 보안 항목은 [DEPLOYMENT.md](DEPLOYMENT.md)를 참고하세요.
+
 이 패키지는 2026-09-07 작업본을 바탕으로 변경한 버전입니다.
 작업자·금형·작업코드 실데이터, 공개 Supabase 키, 브라우저용 Excel/JSON을 public 폴더에 넣지 않습니다.
 로그인 화면은 정적 HTML이며 데이터 권한은 서버와 DB에서 검사합니다.
@@ -132,7 +135,8 @@ where user_id is null and "Id" = 확인한사번 and name = '확인한이름';
 이번 버전은 서버 함수가 필요하므로 public 폴더만 Netlify Drop에 끌어 놓아서는 로그인할 수 없습니다.
 Git 연결 배포 또는 Netlify CLI로 정적 파일과 함수를 함께 배포하세요.
 
-권장: 비공개 Git 저장소에 이 프로젝트의 소스만 추가하고 Netlify에서 연결
+Git 저장소에는 이 프로젝트의 소스만 추가하고 Netlify에서 연결합니다.
+현재 저장소는 운영자의 요청에 따라 공개 상태를 유지합니다. 직원·금형 원본과 비밀키를 커밋하지 마세요.
 - Base directory: 이 프로젝트
 - Build command: 비워 둠
 - Publish directory: public
