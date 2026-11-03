@@ -1,73 +1,179 @@
-# 금형공장 작업일보 모바일
+# 사번·PIN 작업일보 — 배포 안내
 
-Netlify에 그대로 올릴 수 있는 정적 웹사이트입니다. 기존 Windows 작업일보 프로그램의 작업 흐름을 모바일 카드형 화면으로 옮겼습니다.
+이 패키지는 2026-09-07 작업본을 바탕으로 변경한 버전입니다.
+작업자·금형·작업코드 실데이터, 공개 Supabase 키, 브라우저용 Excel/JSON을 public 폴더에 넣지 않습니다.
+로그인 화면은 정적 HTML이며 데이터 권한은 서버와 DB에서 검사합니다.
+인증 후 화면에 표시하는 본인 정보와 조회한 금형 1건은 브라우저 메모리에 존재합니다.
+브라우저로 화면을 제공하면서 이 표시 데이터까지 숨기는 것은 불가능합니다.
 
-## 먼저 할 일
+## 구조와 운영 방식
 
-1. Supabase 대시보드의 **SQL Editor**에서 `supabase-setup.sql`을 실행합니다.
-2. 이 폴더 전체를 Netlify에 배포합니다. Git 저장소라면 별도 빌드 명령 없이 publish directory를 프로젝트 루트로 지정하면 됩니다.
-3. 휴대폰에서 이름·사번, 금형 조회, 2개 이상 작업 추가, 등록 완료까지 확인합니다.
+- public/: 로그인, PIN 변경, 작업일보 화면만 배포
+- netlify/functions/api.mjs: 인증·세션·조회·저장 서버
+- database/001_secure_auth.sql: DB 마이그레이션
+- admin/manage.mjs: 관리자 로컬 계정/데이터 도구
+- tests/: 실제 PostgreSQL 엔진을 이용한 로컬 검증. 인명/금형은 모두 테스트 값
+- qa/: 화면 테스트 산출물, 운영 데이터 없음
 
-`supabase-setup.sql` 실행 전에는 사진 속 `no` 컬럼의 기본값이 비어 있어 등록이 실패합니다. 웹을 먼저 공개하지 말고 SQL부터 적용해 주세요.
+사번은 기존 자료와 동일한 숫자 9자리입니다. PIN은 숫자 8~12자리입니다.
+관리자가 발급하는 10자리 임시 PIN으로 최초 로그인하면 개인 PIN 변경이 필수입니다.
+사번과 이름만 입력해 타인의 계정을 선점하는 가입 기능은 제공하지 않습니다.
+개인 PIN은 Supabase Auth에서 해시로 보관하며 직원 테이블에 저장하지 않습니다.
 
-## 포함 기능
+세션은 8시간이며 개인 정보/초안/토큰을 localStorage 또는 sessionStorage에 저장하지 않습니다.
+새로고침 시 미제출 입력은 사라집니다. 로그인 세션은 HttpOnly/Secure 쿠키로 유지됩니다.
+등록 후 누락되지 않도록 성공 안내까지 기다려 주세요.
+하루 누적 1,440분, 1회 최대 10개, 10분 단위 제한을 서버에서도 검사합니다.
 
-- `iddata.xlsx` 기준 소속 → 조 → 이름 연속 선택과 사번 자동 표시
-- 작업자와 날짜 1회 입력, 작업 항목 최대 10개 일괄 등록
-- 공정 1~9 드롭다운 중복 선택 및 `25001-1,2,3` 형식의 `swmno` 저장
-- 작업분류·작업코드·장비구분도 화면을 차지하지 않는 중복 선택 드롭다운으로 표시
-- 기존 EXE의 작업구분·작업분류·작업코드·장비구분 선택 목록
-- 5자리 금형번호 자동 조회와 `swmdata.XLSX` 첫 일치 차종·품명 적용
-- 금형번호를 비우면 별도 선택 없이 작업구분을 `H · 기타`로 제한
-- 10분 단위 증감 버튼·직접 입력과 등록 묶음당 최대 1,440분 검증
-- 한국시간 기준 오늘 날짜
-- 입력 중 임시 저장, 오프라인 상태 표시, 15초 요청 제한
-- 응답 유실 후 같은 등록을 다시 눌러도 중복 행이 생기지 않는 제출 ID·저장 함수 처리
-- 상단 일보/조회 전환과 작업자별 작업일자·월별 근무시간 합계 조회
-- 모바일 접근성, 큰 터치 영역, 화면 내 성공·오류 안내
-- 1,280px 이상 PC 화면에서는 작업 1건의 모든 입력칸을 가로 한 줄로 압축 표시
-- 휴대폰(767px 이하)은 큰 2열 선택칸과 작업별 접기/펼치기 제공. 다음 작업 추가 시 기존 작업은 금형·코드·시간 요약으로 접히며, 입력값은 그대로 보존됩니다.
-- 작성/조회 화면의 소속·조·이름 기본 문구는 `선택`, 인적사항 칸은 같은 높이로 정렬됩니다.
-- Netlify 보안 헤더와 앱 화면 오프라인 캐시
+## 1. Supabase 준비
 
-## 금형 기준정보
+1. 기존 DB를 백업하고 기존 익명 웹 사용을 잠시 중지합니다.
+2. SQL Editor에서 database/001_secure_auth.sql 전체를 실행합니다.
+   기존 worklog 행은 보존하고 새 user_id 등만 추가합니다.
+   기존 submit_worklog_batch/get_worklog_summary는 제거하므로 이전 HTML은 즉시 동작하지 않습니다.
+   기존 public.swmno 테이블이 있다면 database/002_legacy_mold_access.sql도 실행합니다.
+   이 파일은 기존 금형 행을 보존하며 직접 API 접근 권한과 정책을 제거합니다.
+3. Authentication에서 Email 비밀번호 로그인을 활성화하고 공개 회원가입과 익명 로그인을 비활성화합니다.
+4. PIN 정책을 숫자 전용 허용 / 최소 8자리로 설정합니다. 영문·기호 필수 정책을 켜면 숫자 PIN이 거절됩니다.
+5. Require current password when updating을 켭니다. Secure password change도 사용할 수 있습니다.
+   앱이 PIN 변경 직전에 현재 PIN으로 다시 로그인하므로 새 인증 세션에서 변경됩니다.
+   이메일 OTP를 직접 요구하는 별도 흐름은 사용하지 않습니다.
+6. 계정 생성은 초대 메일이 아닌 관리자 API의 email_confirm:true 방식입니다. SMTP는 사용하지 않습니다.
+7. Authentication의 API 속도 제한을 점검합니다. 70명이 공유 IP로 로그인하거나 최초 PIN 변경을 동시에
+   진행하면 Supabase 자체 한도에 걸릴 수 있으므로 최초 등록은 나누어 진행하고 실제 교대시간에 부하 검증합니다.
+   앱 자체 제한은 사번별 15분 10회, IP별 15분 300회이며 Supabase 제한은 별개입니다.
 
-`data/master-data.xlsx`가 작업자와 금형 기준정보의 기본 원본입니다. Excel에서 아래 두 시트의 표를 수정하고 파일명을 유지한 채 Netlify에 다시 배포하면 웹에 바로 반영됩니다.
+새 기준정보 테이블은 Table Editor에서 wl_private 스키마를 선택하면 확인할 수 있습니다.
+wl_private를 Data API의 Exposed schemas 목록에 추가하지 마세요.
+employees의 user_id/active/must_change_pin은 인증 상태이므로 임의로 수정하지 마세요.
+금형은 molds, 직원 이름·소속·조는 employees, 선택 항목은 catalog에서 관리합니다.
+SQL은 최초 생성 때만 catalog를 채우므로 재실행해도 관리자가 수정한 목록을 덮어쓰지 않습니다.
+계정 비활성화는 employees.active=false로 설정하면 즉시 서버 접근이 차단됩니다.
 
-- `작업자` 시트: 이름, 소속, 조, 사번
-- `금형` 시트: 금형번호, 차종, 품명
+## 2. 서버 환경변수
 
-금형번호는 앞 5자리를 사용하며 같은 번호가 반복되면 Excel 표에서 처음 나타난 내용을 적용합니다. 제목 행과 열 이름은 변경하지 말고 표의 데이터 행만 수정해 주세요. 사번과 금형번호는 앞자리 유실을 막기 위해 텍스트 형식을 유지하는 것이 안전합니다.
+Netlify 사이트 → Environment variables에서 아래 값을 Functions 범위에 설정합니다.
+요금제에서 범위를 개별 선택할 수 없다면 Contains secret values를 켜고
+Production 컨텍스트만 선택합니다. 이 경우 Builds/Functions/Runtime 범위를 사용하게 됩니다.
+운영 APP_ORIGIN과 배포 URL이 정확히 일치해야 합니다(끝에 / 없음).
+프로덕션 이외 preview에 운영 비밀키를 주입하지 마세요. 개발은 별도 DB로 분리하세요.
 
-현재 Supabase 프로젝트에는 기존 HTML이 조회하던 `mold_master` 테이블이 없습니다. 웹은 `master-data.xlsx`를 우선 읽고, 파일 손상이나 누락 시에만 기존 `employee-master.json`과 `mold-master.json`을 예비 데이터로 사용합니다.
+| 이름 | 값 |
+|---|---|
+| SUPABASE_URL | 현재 Supabase 프로젝트 URL |
+| SUPABASE_PUBLISHABLE_KEY | Publishable key |
+| SUPABASE_SECRET_KEY | 서버 전용 Secret key (기존 service_role JWT도 지원) |
+| APP_ORIGIN | 예: https://내사이트.netlify.app |
+| AUTH_ID_DOMAIN | 관리하는 도메인의 내부 로그인용 하위 도메인 |
+| SESSION_KEY | 무작위 32바이트를 hex 64글자로 표현한 값 |
 
-기준정보를 갱신할 때는 새 `swmdata.XLSX`로 `data/mold-master.json`을 다시 생성하거나, 별도 `mold_master` 테이블을 만든 뒤 `config.js`의 `MOLD_MASTER_SOURCE`를 `supabase`로 바꿀 수 있습니다.
+SESSION_KEY 생성 (Node.js 22 이상):
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
-업로드한 `iddata.xlsx`의 작업자 63명을 Excel과 예비 JSON에 포함했습니다. Netlify 정적 배포에서는 Excel과 JSON의 이름·사번을 사이트 방문자가 내려받을 수 있으므로, 외부 공개 URL이라면 운영 전에 Supabase Auth와 보호된 조회 함수로 옮기는 것을 권장합니다.
+AUTH_ID_DOMAIN은 사번을 Supabase 내부 계정 ID로 바꾸기 위한 값입니다.
+사용자 메일함을 만들거나 메일을 수신할 필요는 없습니다.
+다른 사람이 소유한 도메인은 쓰지 말고 최초 계정 생성 후에는 값을 바꾸지 마세요.
+내부 로그인 ID가 이메일 형식이라는 이유만으로 SMTP를 연결할 필요는 없습니다.
+SESSION_KEY를 변경하면 기존 쿠키는 무효가 됩니다.
 
-## 중요한 보안 안내
+비밀키는 public/, HTML, config.js, Git 저장소 또는 채팅에 넣지 않습니다.
+관리자 도구는 로컬 .env 파일에서만 읽도록 .env.example을 복사한 후 값을 채웁니다.
+.env 파일은 배포/공유 ZIP에 포함하지 않습니다.
 
-- `config.js`의 `sb_publishable_...` 키는 브라우저 공개용이며 숨길 수 있는 비밀키가 아닙니다.
-- `service_role` 또는 secret 키는 HTML/JavaScript/Netlify 공개 환경변수에 절대 넣지 마세요.
-- 동봉 SQL은 익명·인증 역할의 `worklog` 직접 INSERT를 막고, 검증·중복 방지를 수행하는 `submit_worklog_batch` 함수 실행만 허용합니다. URL이 외부에 공개되면 함수 호출을 통한 위조 입력은 가능하므로, 운영 단계에서는 Supabase Auth 또는 사내 인증을 추가하는 것이 안전합니다.
-- 조회 화면은 원본 작업 행을 직접 공개하지 않고 `get_worklog_summary` 함수가 선택한 작업자의 날짜별 총 시간과 건수만 반환합니다. 새 조회 기능을 사용하려면 최신 `supabase-setup.sql`을 다시 실행해야 합니다.
-- 금형 기준정보 JSON도 Netlify에서 다운로드할 수 있습니다. 외부 공개가 곤란한 데이터라면 인증된 서버 함수/Edge Function 뒤로 이동해야 합니다.
-- 체크하지 않은 작성 내용은 현재 탭의 sessionStorage에만, 체크한 작성 내용과 작업자 정보는 localStorage에 최대 7일간 보관됩니다. 공용 휴대폰에서는 체크하지 마세요.
-- 응답을 받지 못했을 때는 입력값을 바꾸지 않고 다시 등록하면 같은 제출 ID로 저장 여부를 확인합니다. 이미 저장된 내용과 화면이 달라진 경우에만 화면에 명시적인 ‘새 제출 전환’ 절차가 나타납니다.
+## 3. 기존 데이터 이전
 
-## 현재 Supabase 컬럼 대응
+이 패키지에는 직원/금형 원본을 넣지 않았습니다.
+원본 자료의 최신 버전을 확인한 다음 비공개 경로에서 가져오세요.
 
-사진의 `date`, `name`, `Id`, `swmno`, `proc`, `car`, `part`, `cat`, `code`, `time`, `remark`를 저장하며 `no`는 DB가 자동 생성합니다. 선택 공정은 `proc`에도 보존하고 `swmno`에는 `금형번호-공정목록` 형식으로 저장합니다. 금형번호가 없으면 `swmno`, `proc`, `car`, `part`를 `NULL`로 저장합니다.
+기존 JSON이 최신 데이터와 같을 때:
+node --env-file=.env admin/manage.mjs import-json "C:/비공개/employee-master.json" "C:/비공개/mold-master.json"
 
-안전한 재전송을 위해 SQL이 `submission_id`, `line_no`를 추가하고, 서버 등록 시각용 `created_at`도 추가합니다. 기존 EXE의 작업분류·장비구분은 사진에 전용 컬럼이 없어 `[작업분류:…]`, `[장비구분:…]` 표기로 `remark` 앞부분에 보존합니다.
+현재 작업 폴더에 있는 이전 JSON 경로:
+C:/Users/geonhoshin/Documents/Codex/2026-08-20/g/work/worklog-site/data/employee-master.json
+C:/Users/geonhoshin/Documents/Codex/2026-08-20/g/work/worklog-site/data/mold-master.json
 
-데이터 누락을 줄이기 위해 모바일 화면은 기존 EXE보다 엄격하게 작업구분과 작업코드를 필수로 받습니다. 공정은 기존 EXE와 같이 선택사항입니다.
+이전 웹의 master-data.xlsx를 JSON 생성 이후에 수정했다면 먼저 그 수정 내용을 DB에 반영해야 합니다.
+오래된 JSON으로 최신 Excel을 덮어쓰지 마세요.
+최초 이전 이후 기준정보는 Supabase에서 관리하며 배포파일을 수정할 필요가 없습니다.
+추가 JSON 가져오기는 아래 형식(실제 파일은 비공개 위치)에 맞춰 실행합니다.
 
-## 배포 후 확인
+node --env-file=.env admin/manage.mjs import employees "C:/비공개/employees.json"
+형식: [{"employee_no":"사번9자리","name":"이름","department":"소속","team":"조"}]
 
-- `config.js`의 Supabase URL·publishable key와 `netlify.toml`의 CSP `connect-src` 주소가 같은지 확인합니다.
-- 금형 작업 1건, 비금형 작업 1건, 같은 번호의 후보 선택 1건을 시험 등록합니다.
-- Supabase에서 `no`와 `created_at`이 자동 생성되고 `submission_id + line_no`가 중복되지 않는지 확인합니다.
-- 현재 1,440분 제한은 한 번에 등록하는 작업 묶음 기준입니다. 작업자별 하루 누계를 강제해야 한다면 인증된 Supabase RPC에서 날짜·사번 누계를 검사해야 합니다.
+node --env-file=.env admin/manage.mjs import molds "C:/비공개/molds.json"
+형식: [{"number":"금형5자리","car":"차종","part":"품명"}]
 
-기존 데이터까지 새 검사 규칙으로 검증하려면 잘못된 행을 먼저 정리한 뒤 SQL Editor에서 각 `worklog_*_check` 제약조건에 `VALIDATE CONSTRAINT`를 실행하세요. `NOT VALID`로 추가된 제약도 새 모바일 등록에는 즉시 적용됩니다. 설정 SQL을 다시 실행하면 검사 정의를 최신본으로 교체하면서 검증 상태도 초기화되므로, 재실행 뒤에는 기존 데이터 검증도 다시 수행해야 합니다.
+## 4. 작업자 계정 생성 / PIN 재설정
+
+node --env-file=.env admin/manage.mjs create 사번9자리
+node --env-file=.env admin/manage.mjs reset 사번9자리
+
+임시 PIN은 관리자 터미널에 한 번 표시합니다. 본인 확인 후 작업자에게 개별 전달합니다.
+명령 출력에 임시 PIN이 있으므로 터미널 기록을 공유하거나 파일에 일괄 저장하지 마세요.
+사용자가 새 PIN을 설정하면 기존 임시 PIN은 무효가 됩니다.
+PIN 변경/관리자 초기화 시 기존 앱 세션은 전부 종료됩니다.
+
+관리자 초기화는 먼저 계정을 비활성화하고 세션을 폐기합니다.
+Auth 변경 중 실패하면 비활성 상태를 유지하여 안전하게 중단합니다.
+복구 시 같은 reset을 다시 실행하세요.
+create가 Auth 생성 직후 실패했다면 Auth Users에서 해당 사번 계정 UUID를 확인하고,
+SQL Editor에서 wl_admin_bind('사번', 'UUID')로 재연결한 후 reset을 실행하세요.
+새 계정을 만들려고 사번을 바꾸거나 기존 Auth 사용자를 무작정 삭제하지 마세요.
+
+이전 익명 작업일보의 user_id는 자동 연결하지 않았습니다.
+과거에는 이름/사번을 위조할 수 있었으므로 관리자가 확인한 데이터만 아래 조건으로 연결하세요.
+이 SQL은 예시이며 해당 작업자의 실제 UUID와 사번/이름으로 바꿔 실행합니다.
+update public.worklog set user_id = '확인한 UUID'
+where user_id is null and "Id" = 확인한사번 and name = '확인한이름';
+연결 전 과거 행은 직원 조회에 나타나지 않으며 데이터 자체는 그대로 보존됩니다.
+
+## 5. Netlify 배포
+
+이번 버전은 서버 함수가 필요하므로 public 폴더만 Netlify Drop에 끌어 놓아서는 로그인할 수 없습니다.
+Git 연결 배포 또는 Netlify CLI로 정적 파일과 함수를 함께 배포하세요.
+
+권장: 비공개 Git 저장소에 이 프로젝트의 소스만 추가하고 Netlify에서 연결
+- Base directory: 이 프로젝트
+- Build command: 비워 둠
+- Publish directory: public
+- Functions directory: netlify/functions
+- Node runtime: 22 이상 (현재 서비스에서 지원하는 버전 확인)
+
+CLI를 사용한다면 프로젝트 루트에서:
+npx netlify-cli login
+npx netlify-cli link
+npx netlify-cli deploy --prod --dir=public --functions=netlify/functions
+
+배포 시 환경변수 설정과 SQL/기준정보/계정 준비가 선행되어야 합니다.
+public만 수동 업로드하거나 기존 공개 data 폴더와 합쳐 배포하지 마세요.
+
+이전 배포 이력에 직원 Excel/JSON이 들어 있습니다.
+신규 배포는 /data/*를 410으로 막지만 과거 Netlify 배포 고유 URL까지 삭제하지는 못합니다.
+운영 전 Netlify에서 해당 과거 배포/미리보기 접근을 차단하거나 삭제하세요.
+이미 다운로드된 파일, 온라인 업데이트를 받지 않은 기기의 캐시는 서버에서 회수할 수 없습니다.
+새 sw.js는 새 버전을 방문한 기기에서 기존 field-worklog 캐시를 제거하고 스스로 해제합니다.
+
+## 6. 실제 운영 확인
+
+로컬 테스트는 운영 데이터에 접근하지 않았습니다. 다음은 실제 배포 후 확인해야 합니다.
+- 미로그인 /api/me, /api/mold, /api/options, /api/submit → 401
+- 직원 A와 B를 각각 만들고 서로의 이력 접근이 불가능한지 확인
+- 임시 PIN → 개인 PIN 변경 강제 → 새 PIN 로그인
+- 로그인 후 이름/사번/소속/조 자동 표시, 수정 불가
+- 금형번호 실제 1건 조회와 미등록 번호/빈 금형 구분
+- 2건 등록, 응답 유실 재시도, 월별 합계, 로그아웃 후 재접근
+- 퇴사자 비활성/관리자 PIN 초기화 후 기존 기기 세션 차단
+- /data/*, /config.js, /database/*, /.env, /admin/*, 옛 배포 URL의 비공개 여부
+- Supabase Security Advisor 및 database/audit.sql로 기존 별도 테이블/뷰/함수의 공개 권한 확인
+
+## 검증 실행
+pnpm install --frozen-lockfile
+node --test tests/api.test.mjs
+node tests/ui.mjs
+
+UI 테스트는 Playwright와 Edge가 필요합니다. PLAYWRIGHT_MODULE 환경변수로
+설치된 playwright 모듈 경로를 지정할 수 있습니다.
+PGlite/Playwright는 로컬 검증용이며 운영 API는 외부 npm 의존성이 없습니다.
+
+모든 취약점이 없다는 보장은 할 수 없습니다. 확인 범위와 남은 항목은 SECURITY.md에 기록했습니다.
+
