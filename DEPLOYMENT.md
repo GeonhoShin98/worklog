@@ -1,6 +1,6 @@
 # 운영 반영 결과 — 2026-11-03
 
-운영 주소: https://swmworklog.netlify.app
+운영 주소는 연결된 Netlify 프로젝트의 Production 링크에서 확인할 수 있습니다.
 
 ## 적용
 
