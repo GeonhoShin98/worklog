@@ -1950,6 +1950,8 @@ select[multiple] option {
 .auth-help { color:#526075; font-size:15px; line-height:1.6; }
 .auth-form button { min-height:52px; }
 .admin-shell { max-width:1300px; margin:24px auto; padding:0 16px 48px; }
+#adminIdentity { display:inline-block; padding:10px 16px; background:#fff; color:#173f73; border-radius:8px; }
+#adminMessage:not(:empty) { padding:12px 16px; background:#fff; border-radius:8px; }
 .admin-shell .panel { margin-top:20px; padding:24px; }
 .admin-tabs { display:flex; flex-wrap:wrap; gap:10px; }
 .admin-tabs button,.admin-tabs a,.admin-pagination button,.admin-table button { padding:10px 14px; border:1px solid #9baec5; border-radius:8px; background:white; color:#173f73; text-decoration:none; font:inherit; cursor:pointer; }

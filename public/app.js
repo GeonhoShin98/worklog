@@ -475,10 +475,11 @@
         selector.addEventListener("change",async function(){
           var next = workers.find(function(w){return w.employee_no===selector.value;});
           if (!next || isSubmitting) return;
-          selector.disabled = true; submitButton.disabled = true;
+          selector.disabled = true; submitButton.disabled = true; taskList.inert = true; addTaskBottom.disabled = true;
+          showStatus("선택한 작업자 정보를 불러오는 중입니다.","info");
           try { await loadOptions(next); currentWorker = next; applyIdentity(); resetTasksAfterSuccess(); lookupResults.hidden = true; hideStatus(); }
           catch(error) { selector.value=currentWorker.employee_no; showStatus(error.message,"error"); }
-          finally { selector.disabled=false; submitButton.disabled=!navigator.onLine; }
+          finally { selector.disabled=false; taskList.inert=false; updateTaskNumbers(); submitButton.disabled=!navigator.onLine; }
         });
       }
       applyIdentity();
