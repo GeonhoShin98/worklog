@@ -32,8 +32,8 @@ function cookie(value,maxAge) {
   return COOKIE+"="+value+"; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age="+maxAge;
 }
 function validPin(pin, employee="") {
-  return typeof pin==="string" && /^\d{8,12}$/.test(pin) &&
-    !/^(\d)\1+$/.test(pin) && !["0123456789","1234567890","9876543210","0987654321"].some(v=>v.includes(pin)) && pin!==employee;
+  return typeof pin==="string" && /^[A-Za-z0-9]{8,32}$/.test(pin) &&
+    /[A-Za-z]/.test(pin) && /[0-9]/.test(pin) && pin!==employee;
 }
 const textError = (status,code,message) => new Failure(status,code,message);
 export function createHandler({ env=process.env, request=fetch }={}) {
@@ -63,7 +63,8 @@ export function createHandler({ env=process.env, request=fetch }={}) {
         if(!res.ok) {
           if(res.status===429) throw textError(429,"RATE_LIMIT","시도 횟수가 많습니다. 잠시 후 다시 시도하세요.");
           if(payload.code==="P1001") throw deny();
-          if(payload.code==="P1002") throw textError(403,"PIN_REQUIRED","개인 PIN을 먼저 변경하세요.");
+          if(payload.code==="P1002") throw textError(403,"PIN_REQUIRED","초기 비밀번호를 먼저 변경하세요.");
+          if(payload.code==="P1004") throw textError(403,"ADMIN_REQUIRED","관리자 권한이 필요합니다.");
           if(payload.code==="P1003") throw textError(409,"CONFLICT","같은 제출 번호의 내용이 다릅니다. 기존 등록을 확인하세요.");
           if(payload.code==="22023" || payload.code==="23514") throw textError(400,"VALIDATION","입력값을 확인하세요. 금형·작업코드·시간 또는 날짜가 올바르지 않습니다.");
           throw textError(502,"UPSTREAM","요청을 처리하지 못했습니다. 관리자에게 문의하세요.");
@@ -83,7 +84,7 @@ export function createHandler({ env=process.env, request=fetch }={}) {
         if(!ip) throw textError(503,"SETUP","접속 환경을 확인할 수 없습니다.");
         await limit("ip",ip,300);
         if(typeof input.employee_no!=="string" || !/^\d{9}$/.test(input.employee_no) ||
-           typeof input.pin!=="string" || !/^\d{8,12}$/.test(input.pin)) throw textError(401,"LOGIN_FAILED","사번 또는 PIN이 올바르지 않습니다.");
+           typeof input.pin!=="string" || !/^[A-Za-z0-9]{8,32}$/.test(input.pin)) throw textError(401,"LOGIN_FAILED","사번 또는 비밀번호가 올바르지 않습니다.");
         await limit("employee",input.employee_no,10);
         let token;
         try {
@@ -92,11 +93,11 @@ export function createHandler({ env=process.env, request=fetch }={}) {
           });
         } catch(error) {
           if(error.status===429 || error.status===503) throw error;
-          throw textError(401,"LOGIN_FAILED","사번 또는 PIN이 올바르지 않습니다.");
+          throw textError(401,"LOGIN_FAILED","사번 또는 비밀번호가 올바르지 않습니다.");
         }
         let profile;
         try { profile=await rpc("wl_open_session",{_user:token.user.id}); }
-        catch { throw textError(401,"LOGIN_FAILED","사번 또는 PIN이 올바르지 않습니다."); }
+        catch { throw textError(401,"LOGIN_FAILED","사번 또는 비밀번호가 올바르지 않습니다."); }
         const value={access:token.access_token,refresh:token.refresh_token,uid:token.user.id,sid:profile.session_id,
           until:Date.now()+SESSION_SECONDS*1000,accessUntil:Date.now()+token.expires_in*1000};
         setCookie=cookie(encrypt(value,c.SESSION_KEY),SESSION_SECONDS);
@@ -128,19 +129,56 @@ export function createHandler({ env=process.env, request=fetch }={}) {
       if(action==="pin") {
         await limit("pin",session.uid,8);
         if(!validPin(input.new_pin,profile.employee_no) || input.new_pin===input.current_pin ||
-           typeof input.current_pin!=="string" || !/^\d{8,12}$/.test(input.current_pin))
-          throw textError(400,"PIN_INVALID","새 PIN은 숫자 8~12자리이며 현재 PIN·사번·단순 반복/연속 번호와 달라야 합니다.");
+           typeof input.current_pin!=="string" || !/^[A-Za-z0-9]{8,32}$/.test(input.current_pin))
+          throw textError(400,"PIN_INVALID","새 비밀번호는 영문과 숫자를 모두 포함한 8~32자리이며 현재 비밀번호와 달라야 합니다.");
         let verified;
         try { verified=await upstream("/auth/v1/token?grant_type=password",{email:user.email,password:input.current_pin}); }
-        catch { throw textError(400,"PIN_INVALID","현재 PIN을 확인하세요."); }
+        catch { throw textError(400,"PIN_INVALID","현재 비밀번호를 확인하세요."); }
         if(verified.user.id!==session.uid) throw deny();
         await upstream("/auth/v1/user",{password:input.new_pin,current_password:input.current_pin},{method:"PUT",token:verified.access_token});
         await rpc("wl_finish_pin_change",{_session:session.sid,_user:session.uid});
         await upstream("/auth/v1/logout?scope=global",{}, {token:verified.access_token}).catch(()=>{});
         setCookie=cookie("",0); return reply(200,{ok:true});
       }
-      if(profile.must_change_pin) throw textError(403,"PIN_REQUIRED","개인 PIN을 먼저 변경하세요.");
+      if(profile.must_change_pin) throw textError(403,"PIN_REQUIRED","초기 비밀번호를 먼저 변경하세요.");
       const identity={_session:session.sid,_user:session.uid};
+      if(action.startsWith("admin-")) {
+        if(profile.role!=="admin") throw textError(403,"ADMIN_REQUIRED","관리자 권한이 필요합니다.");
+        await limit("admin",session.uid,500);
+        if(action==="admin-employees") return reply(200,await rpc("wl_manager_employees",identity));
+        if(action==="admin-options") return reply(200,await rpc("wl_manager_options",{...identity,_number:input.employee_no}));
+        if(action==="admin-submit") return reply(200,await rpc("wl_manager_submit",{...identity,_number:input.employee_no,_payload:input.payload}));
+        if(action==="admin-report") return reply(200,await rpc("wl_manager_report",{...identity,_from:input.from,_to:input.to,_number:input.employee_no||null,_offset:input.offset??0}));
+        if(action==="admin-molds") return reply(200,await rpc("wl_manager_molds",{...identity,_query:input.query??"",_offset:input.offset??0}));
+        if(action==="admin-mold-save") { await rpc("wl_manager_save_mold",{...identity,_row:input.row}); return reply(200,{ok:true}); }
+        async function provision(row) {
+          const number=row.employee_no;
+          if(!/^\d{9}$/.test(number)) throw textError(400,"VALIDATION","사번을 확인하세요.");
+          const created=await upstream("/auth/v1/admin/users"+(row.user_id?"/"+row.user_id:""),
+            {email:number+"@"+c.AUTH_ID_DOMAIN,password:number,email_confirm:true},
+            {method:row.user_id?"PUT":"POST",key:c.SUPABASE_SECRET_KEY,...(!c.SUPABASE_SECRET_KEY.startsWith("sb_secret_")?{token:c.SUPABASE_SECRET_KEY}:{})});
+          const uid=created.id||created.user?.id;
+          if(!uid) throw textError(502,"UPSTREAM","계정 생성 상태를 확인하세요.");
+          await rpc("wl_admin_bind",{_number:number,_user:uid});
+        }
+        if(action==="admin-employee-save") {
+          const row=await rpc("wl_manager_save_employee",{...identity,_row:input.row});
+          if(!row.user_id && row.active) { await rpc("wl_admin_prepare_reset",{_number:row.employee_no}); await provision(row); }
+          return reply(200,{ok:true});
+        }
+        if(action==="admin-reset") {
+          await limit("admin-reset",session.uid,20);
+          if(typeof input.current_password!=="string" || !/^[A-Za-z0-9]{8,32}$/.test(input.current_password)) throw textError(400,"PASSWORD_INVALID","관리자 본인의 현재 비밀번호를 확인하세요.");
+          let verified;
+          try { verified=await upstream("/auth/v1/token?grant_type=password",{email:user.email,password:input.current_password}); }
+          catch { throw textError(400,"PASSWORD_INVALID","관리자 본인의 현재 비밀번호를 확인하세요."); }
+          if(verified.user.id!==session.uid) throw deny();
+          await upstream("/auth/v1/logout?scope=local",{}, {token:verified.access_token}).catch(()=>{});
+          const row=await rpc("wl_manager_prepare_reset",{...identity,_number:input.employee_no});
+          await provision(row);return reply(200,{ok:true});
+        }
+        return reply(404,{message:"요청을 찾을 수 없습니다."});
+      }
       if(action==="options") return reply(200,await rpc("wl_options",identity));
       if(action==="mold") {
         if(typeof input.number!=="string" || !/^\d{5}$/.test(input.number)) throw textError(400,"VALIDATION","금형번호는 숫자 5자리입니다.");

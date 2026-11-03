@@ -9,16 +9,16 @@
 <body data-page="login">
 <main class="auth-shell panel">
 <p class="eyebrow">WORK LOG</p><h1>금형공장 작업일보</h1>
-<p class="auth-help">사번과 개인 PIN으로 로그인하세요.</p>
+<p class="auth-help">사번과 비밀번호로 로그인하세요.</p>
 <form id="authForm" class="auth-form">
-<label for="employeeNo">사번</label><input id="employeeNo" name="username" autocomplete="username" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" required placeholder="사번 9자리">
-<label for="pin">개인 PIN</label>
-<input id="pin" name="password" type="password" autocomplete="current-password" inputmode="numeric" pattern="[0-9]{8,12}" minlength="8" maxlength="12" required>
+<label for="employeeNo">사번</label><input id="employeeNo" name="username" autocomplete="username" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" data-ascii="true" autocapitalize="none" spellcheck="false" required placeholder="사번 9자리">
+<label for="pin">비밀번호</label>
+<input id="pin" name="password" type="password" autocomplete="current-password" pattern="[A-Za-z0-9]{8,32}" minlength="8" maxlength="32" data-ascii="true" autocapitalize="none" spellcheck="false" required placeholder="영문·숫자만 입력">
 
 <button id="authButton" type="submit" class="button button-primary">로그인</button>
 <p id="authMessage" role="status" aria-live="polite" class="auth-message"></p>
 </form>
-<p class="auth-help">처음 이용하거나 PIN을 잊으셨다면 관리자에게 임시 PIN 발급을 요청하세요. 공용 기기에서는 사용 후 로그아웃하세요.</p>
+<p class="auth-help">첫 로그인 후에는 새 비밀번호를 설정해야 합니다. 비밀번호를 잊으셨다면 관리자에게 초기화를 요청하세요. 공용 기기에서는 사용 후 로그아웃하세요.</p>
 <noscript>로그인하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
 </main>
 </body></html>

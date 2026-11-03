@@ -2,20 +2,20 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>PIN 변경 · 금형공장 작업일보</title>
+<meta name="robots" content="noindex,nofollow"><title>비밀번호 변경 · 금형공장 작업일보</title>
 <link rel="stylesheet" href="/styles.css">
 <script src="/security.js" defer></script><script src="/auth.js" defer></script>
 </head>
 <body data-page="pin">
 <main class="auth-shell panel">
 <p class="eyebrow">WORK LOG</p><h1>금형공장 작업일보</h1>
-<p class="auth-help">현재 PIN을 확인하고 새 개인 PIN을 설정하세요. 임시 PIN 계정은 변경을 완료해야 작업일보를 사용할 수 있습니다.</p>
+<p class="auth-help">현재 비밀번호를 확인하고 영문과 숫자를 조합한 새 비밀번호를 설정하세요. 초기 비밀번호는 변경을 완료해야 서비스를 사용할 수 있습니다.</p>
 <form id="authForm" class="auth-form">
 
-<label for="pin">현재 PIN</label>
-<input id="pin" name="password" type="password" autocomplete="current-password" inputmode="numeric" pattern="[0-9]{8,12}" minlength="8" maxlength="12" required>
-<label for="newPin">새 PIN (숫자 8~12자리)</label><input id="newPin" type="password" autocomplete="new-password" inputmode="numeric" pattern="[0-9]{8,12}" minlength="8" maxlength="12" required><label for="confirmPin">새 PIN 확인</label><input id="confirmPin" type="password" autocomplete="new-password" inputmode="numeric" pattern="[0-9]{8,12}" minlength="8" maxlength="12" required>
-<button id="authButton" type="submit" class="button button-primary">개인 PIN 저장</button>
+<label for="pin">현재 비밀번호</label>
+<input id="pin" name="password" type="password" autocomplete="current-password" pattern="[A-Za-z0-9]{8,32}" minlength="8" maxlength="32" data-ascii="true" autocapitalize="none" spellcheck="false" required>
+<label for="newPin">새 비밀번호 (영문+숫자 8~32자리)</label><input id="newPin" type="password" autocomplete="new-password" pattern="(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,32}" minlength="8" maxlength="32" data-ascii="true" autocapitalize="none" spellcheck="false" required><label for="confirmPin">새 비밀번호 확인</label><input id="confirmPin" type="password" autocomplete="new-password" pattern="(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,32}" minlength="8" maxlength="32" data-ascii="true" autocapitalize="none" spellcheck="false" required>
+<button id="authButton" type="submit" class="button button-primary">새 비밀번호 저장</button>
 <p id="authMessage" role="status" aria-live="polite" class="auth-message"></p>
 </form>
 <a id="backToWork" href="/">작업일보로</a> <button type="button" id="logoutButton" class="button button-secondary">로그아웃</button>

@@ -1949,8 +1949,28 @@ select[multiple] option {
 .auth-message { min-height:28px; color:#a51e31; white-space:pre-wrap; }
 .auth-help { color:#526075; font-size:15px; line-height:1.6; }
 .auth-form button { min-height:52px; }
+.admin-shell { max-width:1300px; margin:24px auto; padding:0 16px 48px; }
+.admin-shell .panel { margin-top:20px; padding:24px; }
+.admin-tabs { display:flex; flex-wrap:wrap; gap:10px; }
+.admin-tabs button,.admin-tabs a,.admin-pagination button,.admin-table button { padding:10px 14px; border:1px solid #9baec5; border-radius:8px; background:white; color:#173f73; text-decoration:none; font:inherit; cursor:pointer; }
+.admin-tabs [aria-pressed="true"] { background:#173f73; color:white; }
+.admin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; align-items:end; margin:20px 0; }
+.admin-grid label { display:grid; gap:8px; font-weight:700; }
+.admin-grid input,.admin-grid select { width:100%; min-width:0; min-height:46px; padding:10px; border:1px solid #b8c9dc; border-radius:8px; background:white; font:inherit; }
+.admin-grid button { min-height:46px; }
+.admin-table { width:100%; overflow:auto; margin:16px 0; }
+.admin-table table { width:100%; border-collapse:collapse; font-size:15px; }
+.admin-table td,.admin-table th { padding:12px; text-align:left; border-bottom:1px solid #d7e0ea; overflow-wrap:anywhere; min-width:90px; }
+.admin-table th { color:#173f73; background:#edf3fa; }
+.admin-pagination { display:flex; justify-content:center; gap:18px; align-items:center; }
+.admin-success { color:#146343; white-space:pre-wrap; }
+#proxyField { margin-bottom:20px; }
 @media(max-width:600px) {
- .header-inner { flex-wrap:wrap; gap:12px; }
+ .header-inner { display:grid; grid-template-columns:1fr auto; gap:12px; }
+ .header-inner>div:first-child { grid-column:1 / -1; }
+ .account-actions { flex-wrap:wrap; margin-left:0; }
+ .admin-grid { grid-template-columns:1fr; }
+ .admin-shell .panel { padding:16px; }
  .account-actions { font-size:13px; gap:6px; }
  .site-header h1 { font-size:22px; }
  .auth-shell { margin:3vh auto; padding:20px; }

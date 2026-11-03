@@ -1,6 +1,5 @@
 // Operator-only tool. Run outside public/. Never ship personal files in the deployment.
 import { readFile } from "node:fs/promises";
-import { randomInt } from "node:crypto";
 const env=process.env;
 for(const name of ["SUPABASE_URL","SUPABASE_SECRET_KEY","AUTH_ID_DOMAIN"]) {
   if(!env[name]) throw new Error("Missing environment variable: "+name);
@@ -43,7 +42,7 @@ if(command==="import-json") {
   if(!row) throw new Error("작업자 기준정보를 먼저 등록하세요.");
   if(command==="create" && row.user_id) throw new Error("이미 계정이 있습니다. 재발급은 reset을 사용하세요.");
   if(command==="reset" && !row.user_id) throw new Error("먼저 create로 계정을 생성하세요.");
-  const pin=Array.from({length:10},()=>randomInt(10)).join("");
+  const pin=number;
   // Block access and revoke all app sessions before changing the Auth credential.
   await rpc("wl_admin_prepare_reset",{_number:number});
   const user=await call("/auth/v1/admin/users"+(row.user_id?"/"+row.user_id:""),
@@ -51,8 +50,7 @@ if(command==="import-json") {
   const uid=user.id||user.user?.id;
   if(!uid) throw new Error("계정 ID를 확인할 수 없습니다. 계정은 비활성 상태로 유지됩니다.");
   await rpc("wl_admin_bind",{_number:number,_user:uid});
-  console.log("임시 PIN (작업자 본인에게만 전달, 별도 파일 저장 금지): "+pin);
-  console.log("최초 로그인 후 개인 PIN 변경이 필요합니다.");
+  console.log("초기 비밀번호를 사번과 같게 설정했습니다. 최초 로그인 후 영문+숫자 비밀번호 변경이 필요합니다.");
 } else {
   throw new Error("사용법: import-json <이전 직원 JSON> <이전 금형 JSON> | import employees|molds <JSON> | create <사번> | reset <사번>");
 }

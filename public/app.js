@@ -4,6 +4,7 @@
   var CONFIG = { MAX_TASKS:10, MAX_TOTAL_MINUTES:1440 };
   var CATEGORY_OPTIONS = {}, CLASSIFICATION_OPTIONS = [], CODE_OPTIONS = {}, EQUIPMENT_OPTIONS = {};
   var currentWorker = null;
+  var loggedAccount = null, proxyMode = false;
 
   var form = document.getElementById("worklogForm");
   var taskList = document.getElementById("taskList");
@@ -360,7 +361,8 @@
     });
   }
   function submitRows(rows) {
-    return WorklogSecurity.api("/api/submit", { submission_id:submissionId, date:workDateInput.value, tasks:rows });
+    var payload = { submission_id:submissionId, date:workDateInput.value, tasks:rows };
+    return proxyMode ? WorklogSecurity.api("/api/admin-submit", {employee_no:currentWorker.employee_no,payload:payload}) : WorklogSecurity.api("/api/submit",payload);
   }
 
   function formatWorkMinutes(value) {
@@ -414,6 +416,7 @@
     });
   }
   function requestLookupSummary(range) {
+    if (proxyMode) return WorklogSecurity.api("/api/admin-report", {from:range.from,to:range.to,employee_no:currentWorker.employee_no}).then(function(r){return r.summary;});
     return WorklogSecurity.api("/api/summary", { from:range.from, to:range.to });
   }
   async function handleLookup(event) {
@@ -436,7 +439,7 @@
     viewToggle.setAttribute("aria-label", showLookup ? "작업일보 작성 화면으로 전환" : "작업 조회 화면으로 전환");
     window.scrollTo({top:0,behavior:"smooth"});
   }
-  function setSubmitting(value) { isSubmitting = value; submitButton.classList.toggle("is-loading",value); submitButton.disabled = value || !navigator.onLine; submitButtonLabel.textContent = value ? "등록 중" : "작업일보 등록"; }
+  function setSubmitting(value) { isSubmitting = value; document.getElementById("proxyEmployee").disabled = value; submitButton.classList.toggle("is-loading",value); submitButton.disabled = value || !navigator.onLine; submitButtonLabel.textContent = value ? "등록 중" : "작업일보 등록"; }
   function resetTasksAfterSuccess() { taskStates.forEach(function (state) { window.clearTimeout(state.lookupTimer); }); taskStates.clear(); taskList.replaceChildren(); submissionId = createSubmissionId(); createTask(); hideConflictAction(); }
   async function handleSubmit(event) {
     event.preventDefault(); if (isSubmitting) return; hideConflictAction(); if (!navigator.onLine) { showStatus("오프라인 상태입니다. 온라인 연결 후 등록해 주세요.","error"); focusStatus(); return; } if (!validateForm()) return;
@@ -451,11 +454,33 @@
     try {
       currentWorker = await WorklogSecurity.requireWorker();
       if (!currentWorker) return;
-      var options = await WorklogSecurity.api("/api/options", {});
-      CATEGORY_OPTIONS[currentWorker.department] = options.categories;
-      CODE_OPTIONS[currentWorker.department] = options.codes;
-      EQUIPMENT_OPTIONS[currentWorker.department] = options.equipment;
-      CLASSIFICATION_OPTIONS = options.classifications;
+      loggedAccount = currentWorker;
+      proxyMode = loggedAccount.role === "admin" && new URLSearchParams(location.search).get("proxy") === "1";
+      document.getElementById("adminLink").hidden = loggedAccount.role !== "admin";
+      async function loadOptions(worker) {
+        var options = await WorklogSecurity.api(proxyMode ? "/api/admin-options" : "/api/options", proxyMode ? {employee_no:worker.employee_no} : {});
+        CATEGORY_OPTIONS[worker.department] = options.categories;
+        CODE_OPTIONS[worker.department] = options.codes;
+        EQUIPMENT_OPTIONS[worker.department] = options.equipment;
+        CLASSIFICATION_OPTIONS = options.classifications;
+      }
+      await loadOptions(currentWorker);
+      if (proxyMode) {
+        document.getElementById("identityNote").textContent = "선택한 작업자의 정보가 자동 입력됩니다. 입력 중 내용은 새로고침하면 사라집니다.";
+        var workers = (await WorklogSecurity.api("/api/admin-employees",{})).filter(function(w){return w.active && w.has_account;});
+        var selector = document.getElementById("proxyEmployee");
+        workers.forEach(function(w){selector.appendChild(new Option(w.department+" · "+w.team+" · "+w.name+" ("+w.employee_no+")",w.employee_no));});
+        selector.value = currentWorker.employee_no;
+        document.getElementById("proxyField").hidden = false;
+        selector.addEventListener("change",async function(){
+          var next = workers.find(function(w){return w.employee_no===selector.value;});
+          if (!next || isSubmitting) return;
+          selector.disabled = true; submitButton.disabled = true;
+          try { await loadOptions(next); currentWorker = next; applyIdentity(); resetTasksAfterSuccess(); lookupResults.hidden = true; hideStatus(); }
+          catch(error) { selector.value=currentWorker.employee_no; showStatus(error.message,"error"); }
+          finally { selector.disabled=false; submitButton.disabled=!navigator.onLine; }
+        });
+      }
       applyIdentity();
       var today = getKoreanToday(); workDateInput.value = today;
       workDateInput.min = shiftIsoDate(today,-31); workDateInput.max = shiftIsoDate(today,1);

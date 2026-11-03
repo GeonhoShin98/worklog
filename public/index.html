@@ -22,7 +22,7 @@
           <p class="eyebrow">FIELD WORK LOG</p>
           <h1>금형공장 작업일보</h1>
         </div>
-        <nav class="account-actions" aria-label="계정 메뉴"><a href="/pin.html">PIN 변경</a><button type="button" id="logoutButton">로그아웃</button></nav>
+        <nav class="account-actions" aria-label="계정 메뉴"><a href="/admin.html" id="adminLink" hidden>관리자</a><a href="/pin.html">비밀번호 변경</a><button type="button" id="logoutButton">로그아웃</button></nav>
         <button type="button" id="viewToggle" class="header-mark" aria-label="작업 조회 화면으로 전환" aria-pressed="false">일보</button>
       </div>
     </header>
@@ -44,6 +44,11 @@
             <p>날짜와 작업자를 확인해 주세요.</p>
           </div>
 
+          <div id="proxyField" class="field-group" hidden>
+            <label for="proxyEmployee">대신 입력할 작업자</label>
+            <select id="proxyEmployee"></select>
+            <p class="privacy-note">선택한 작업자의 일보로 저장되며, 실제 입력한 관리자는 별도로 기록됩니다. 작업자를 바꾸면 작성 중인 작업은 초기화됩니다.</p>
+          </div>
           <div class="identity-grid identity-grid-primary">
             <div class="field-group">
               <label for="workDate">작업일자 <span aria-hidden="true">*</span></label>
@@ -73,7 +78,7 @@
             </div>
           </div>
 
-          <p class="privacy-note">작업자 정보는 로그인 계정으로 자동 입력됩니다. 입력 중 내용은 새로고침하면 사라집니다.</p>
+          <p id="identityNote" class="privacy-note">작업자 정보는 로그인 계정으로 자동 입력됩니다. 입력 중 내용은 새로고침하면 사라집니다.</p>
         </section>
 
         <section class="tasks-section" aria-labelledby="tasksTitle">

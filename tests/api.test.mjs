@@ -24,6 +24,56 @@ test("migration preserves old rows, auto-numbering, revokes legacy column grants
  await db.close();
 });
 
+test('administrator access, delegated author, account management and alphanumeric password policy',async t=>{
+ const f=await fixture(),api=createHandler({env,request:f.request});
+ const send=(action,data,cookie='')=>api(event(action,data,cookie));
+ try {
+  await f.db.query("update wl_private.employees set must_change_pin=false where user_id=$1",[U1]);
+  f.passwords.set(U1,PERSONAL);
+  const worker=getCookie(await send('login',{employee_no:EMP1,pin:PERSONAL}));
+  const routes=['admin-employees','admin-report','admin-options','admin-submit','admin-molds','admin-mold-save','admin-employee-save','admin-reset'];
+  for(const action of routes)assert.equal((await send(action,{},worker)).statusCode,403,action);
+  await f.rpc('wl_admin_set_role',{_number:EMP2,_role:'admin'});
+  let admin=getCookie(await send('login',{employee_no:EMP2,pin:PERSONAL}));
+  const sid=(await f.db.query('select id from wl_private.sessions where user_id=$1',[U2])).rows[0].id;
+  const identity={_session:sid,_user:U2};
+  assert.equal(JSON.parse((await send('me',{},admin)).body).role,'admin');
+  for(const role of ['anon','authenticated']) {await f.db.exec('set role '+role);await assert.rejects(f.rpc('wl_manager_employees',identity));await assert.rejects(f.rpc('wl_admin_set_role',{_number:EMP1,_role:'admin'}));await f.db.exec('reset role');}
+  const emps=JSON.parse((await send('admin-employees',{},admin)).body);assert.equal(emps.length,2);assert.ok(emps.every(e=>!('password' in e)&&!('pin' in e)));
+  const today=(await f.db.query("select (now() at time zone 'Asia/Seoul')::date::text d")).rows[0].d;
+  const payload={submission_id:randomUUID(),date:today,tasks:[task()]};
+  await f.db.query('update wl_private.employees set must_change_pin=true where user_id=$1',[U1]);
+  assert.equal((await send('submit',payload,worker)).statusCode,403);
+  assert.equal((await send('admin-submit',{employee_no:EMP1,payload},admin)).statusCode,200);
+  assert.equal(JSON.parse((await send('admin-submit',{employee_no:EMP1,payload},admin)).body).duplicate,true);
+  const work=(await f.db.query('select * from public.worklog')).rows[0];assert.equal(work.user_id,U1);assert.equal(work.entered_by,U2);assert.equal(work.name,'테스트작업자');assert.equal(work.car,'TEST CAR');
+  const report=JSON.parse((await send('admin-report',{from:today,to:today,employee_no:EMP1},admin)).body);assert.equal(report.total,1);assert.equal(report.summary[0].total_minutes,30);assert.equal(report.rows[0].entered_by_name,'다른작업자');
+  assert.equal((await send('admin-submit',{employee_no:EMP1,payload:{...payload,submission_id:randomUUID(),name:'FORGED'}},admin)).statusCode,400);
+  const saved={employee_no:EMP1,name:'변경직원',department:'사상반',team:'A',active:true};
+  assert.equal((await send('admin-employee-save',{row:{...saved,role:'admin'}},admin)).statusCode,400);
+  assert.equal((await send('admin-employee-save',{row:saved},admin)).statusCode,200);
+  assert.equal((await send('me',{},worker)).statusCode,401);
+  assert.equal((await send('admin-employee-save',{row:{...saved,employee_no:EMP2,active:false}},admin)).statusCode,403);
+  assert.equal((await send('admin-reset',{employee_no:EMP1,current_password:'incorrect8'},admin)).statusCode,400);
+  assert.equal((await send('admin-reset',{employee_no:EMP2,current_password:PERSONAL},admin)).statusCode,403);
+  assert.equal((await send('admin-reset',{employee_no:EMP1,current_password:PERSONAL},admin)).statusCode,200);
+  const reset=getCookie(await send('login',{employee_no:EMP1,pin:EMP1}));
+  assert.equal(JSON.parse((await send('me',{},reset)).body).must_change_pin,true);
+  for(const invalid of ['12345678','OnlyLetters','bad!1234','한글Test12','a'.repeat(32)+'1'])assert.equal((await send('pin',{current_pin:EMP1,new_pin:invalid},reset)).statusCode,400);
+  assert.equal((await send('pin',{current_pin:EMP1,new_pin:'NewWorker123'},reset)).statusCode,200);
+  assert.equal((await send('login',{employee_no:EMP1,pin:'NewWorker123'})).statusCode,200);
+  assert.equal((await send('login',{employee_no:EMP1,pin:'NewWorker123!'})).statusCode,401);
+  assert.equal((await send('admin-employee-save',{row:{...saved,employee_no:'100000003'}},admin)).statusCode,200);
+  assert.equal((await send('login',{employee_no:'100000003',pin:'100000003'})).statusCode,200);
+  assert.equal((await send('admin-mold-save',{row:{number:'99002',car:'CAR2',part:'PART2'}},admin)).statusCode,200);
+  assert.equal(JSON.parse((await send('admin-molds',{query:'CAR2'},admin)).body).rows.length,1);
+  assert.equal(JSON.parse((await send('admin-molds',{query:'\' OR true --'},admin)).body).rows.length,0);
+  assert.equal((await f.db.query("select count(*)::int n from wl_private.audit where action='on_behalf_submit'")).rows[0].n,1);
+  await f.db.query('update wl_private.employees set active=false where user_id=$1',[U1]);
+  assert.equal((await send('admin-submit',{employee_no:EMP1,payload:{...payload,submission_id:randomUUID()}},admin)).statusCode,400);
+ } finally {await f.db.close();}
+});
+
 test("legacy mold rows survive while table, column grants and policies are removed",async()=>{
  const {PGlite}=await import("@electric-sql/pglite");
  const db=new PGlite();
