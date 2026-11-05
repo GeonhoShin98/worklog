@@ -51,7 +51,8 @@ try {
  for(const id of ["department","team","workerName","employeeId"]) assert.equal(await page.locator("#"+id).getAttribute("readonly"),"");
  await page.locator(".mold-input").fill("99001");
  await page.getByText("조회 성공",{exact:true}).waitFor();
- await page.locator(".category-select").selectOption("B");
+ await page.locator(".category-select button").click();
+ await page.locator('.category-select input[value="B"]').click();
  await page.locator(".process-select button").click();await page.locator('.process-select input[value="1"]').check();
  await page.locator(".process-select button").click();
  await page.locator(".code-select button").click();await page.locator('.code-select input[value="F"]').check();

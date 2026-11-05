@@ -18,7 +18,21 @@
     try {
       const me = await WorklogSecurity.api("/api/me",{});
       document.getElementById("backToWork").hidden = me.must_change_pin;
-      document.getElementById("backToWork").href = me.role === "admin" ? "/admin.html" : "/";
+      const destination = me.role === "admin" ? "/admin.html" : "/";
+      document.getElementById("backToWork").href = destination;
+      document.getElementById("deferActions").hidden = !me.initial_password;
+      for (const [id,mode] of [["deferNext","next_login"],["defer30","30_days"]]) {
+        document.getElementById(id).addEventListener("click", async () => {
+          const controls = form.querySelectorAll("input,button");
+          const deferButtons = document.querySelectorAll("#deferActions button");
+          if (button.disabled) return;
+          [...controls,...deferButtons].forEach(control => { control.disabled=true; });
+          message.textContent = "";
+          try { await WorklogSecurity.api("/api/pin-defer",{mode}); location.replace(destination); }
+          catch(error) { message.textContent=error.message; }
+          finally { [...controls,...deferButtons].forEach(control => { control.disabled=false; }); }
+        });
+      }
     } catch { return; }
   }
   form.addEventListener("submit", async event => {

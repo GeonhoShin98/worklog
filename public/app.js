@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  var CONFIG = { MAX_TASKS:10, MAX_TOTAL_MINUTES:1440 };
-  var CATEGORY_OPTIONS = {}, CLASSIFICATION_OPTIONS = [], CODE_OPTIONS = {}, EQUIPMENT_OPTIONS = {};
+  var CONFIG = { MAX_TASKS:10, MAX_TASK_MINUTES:5000, REGULAR_MINUTES:540 };
+  var OTHER_CODE_OPTIONS = {}, CATEGORY_OPTIONS = {}, CLASSIFICATION_OPTIONS = [], CODE_OPTIONS = {}, EQUIPMENT_OPTIONS = {};
   var currentWorker = null;
   var loggedAccount = null, proxyMode = false;
 
@@ -69,15 +69,6 @@
   function hideConflictAction() { conflictAction.hidden = true; newSubmissionButton.dataset.confirm = "0"; newSubmissionButton.textContent = "확인 후 현재 화면을 새 제출로 전환"; }
 
   function optionObjects(list) { return (list || []).map(function (item) { return { value:item[0], label:item[0] + " · " + item[1] }; }); }
-  function setSelectOptions(select, options, placeholder, selectedValues, compactSelected) {
-    var selected = Array.isArray(selectedValues) ? selectedValues.map(String) : [String(selectedValues || "")];
-    select.replaceChildren();
-    if (!select.multiple && placeholder) select.appendChild(new Option(placeholder, ""));
-    options.forEach(function (option) { var item = new Option(option.label, option.value); item.dataset.fullLabel = option.label; item.selected = selected.indexOf(String(option.value)) >= 0; select.appendChild(item); });
-    if (compactSelected) compactSelectValue(select);
-  }
-  function restoreSelectLabels(select) { Array.from(select.options).forEach(function (option) { if (option.dataset.fullLabel) option.textContent = option.dataset.fullLabel; }); }
-  function compactSelectValue(select) { restoreSelectLabels(select); if (select.value && select.selectedOptions[0]) select.selectedOptions[0].textContent = select.value; }
   function updateDropdownSummary(dropdown) {
     var values = selectedValues(".self", dropdown);
     var toggle = dropdown.querySelector(".multi-dropdown-toggle");
@@ -94,7 +85,8 @@
       var label = document.createElement("label");
       label.className = "multi-dropdown-option";
       var input = document.createElement("input");
-      input.type = "checkbox";
+      input.type = dropdown.dataset.single === "true" ? "radio" : "checkbox";
+      if (input.type === "radio") input.name = dropdown.querySelector("button").id + "-choice";
       input.value = String(option.value);
       input.dataset.label = option.label;
       input.checked = selected.indexOf(String(option.value)) >= 0;
@@ -138,7 +130,10 @@
         toggle.setAttribute("aria-expanded", String(willOpen));
         dropdown.classList.toggle("is-open", willOpen);
       });
-      dropdown.addEventListener("change", function () { updateDropdownSummary(dropdown); });
+      dropdown.addEventListener("change", function () {
+        updateDropdownSummary(dropdown);
+        if (dropdown.dataset.single === "true") { closeOtherDropdowns(null); toggle.focus({preventScroll:true}); }
+      });
     });
   }
 
@@ -157,12 +152,16 @@
   function setLookupState(article, state, message) { var data = taskStates.get(article); if (!data) return; data.lookupState = state; article.dataset.lookup = state; article.querySelector(".lookup-status").textContent = message; }
   function setLookupValues(article, car, part) { var data = taskStates.get(article); if (!data) return; data.car = cleanText(car,120); data.part = cleanText(part,180); article.querySelector(".car-value").textContent = data.car || "—"; article.querySelector(".part-value").textContent = data.part || "—"; }
 
+  function categoryValue(article) { return selectedValues(".category-select",article)[0] || ""; }
+  function applyClassificationMode(article) {
+    var dropdown = article.querySelector(".classification-select"), disabled = categoryValue(article) === "H";
+    if (disabled) clearDropdown(dropdown);
+    setDropdownDisabled(dropdown, disabled);
+    dropdown.querySelector("button").title = disabled ? "H 기타는 작업분류를 선택하지 않습니다." : "";
+  }
   function renderCodeOptions(article, selectedCodes) {
-    var category = article.querySelector(".category-select").value;
-    var options = optionObjects(CODE_OPTIONS[departmentInput.value]).filter(function (option) {
-      var numericCode = /^[1-8]$/.test(option.value);
-      return category === "H" ? numericCode : !numericCode;
-    });
+    var category = categoryValue(article);
+    var options = category === "H" ? optionObjects(OTHER_CODE_OPTIONS[departmentInput.value]) : optionObjects(CODE_OPTIONS[departmentInput.value]).filter(function(option) { return !/^[1-8]$/.test(option.value); });
     setDropdownOptions(article.querySelector(".code-select"), options, selectedCodes || []);
   }
 
@@ -171,8 +170,9 @@
     var noMold = article.querySelector(".mold-input").value === "";
     var categories = optionObjects(CATEGORY_OPTIONS[department]);
     if (noMold) categories = categories.filter(function (item) { return item.value === "H"; });
-    setSelectOptions(article.querySelector(".category-select"), categories, "선택", noMold ? "H" : category, true);
+    setDropdownOptions(article.querySelector(".category-select"), categories, noMold ? "H" : category);
     setDropdownOptions(article.querySelector(".classification-select"), optionObjects(CLASSIFICATION_OPTIONS), classifications || []);
+    applyClassificationMode(article);
     renderCodeOptions(article, codes || []);
     setDropdownOptions(article.querySelector(".equipment-select"), optionObjects(EQUIPMENT_OPTIONS[department]), equipment || []);
   }
@@ -180,7 +180,7 @@
   function updateMoldMode(article, preserve) {
     var mold = article.querySelector(".mold-input").value;
     var process = article.querySelector(".process-select");
-    var category = preserve ? article.querySelector(".category-select").value : "";
+    var category = preserve ? categoryValue(article) : "";
     var codes = selectedValues(".code-select", article), classes = selectedValues(".classification-select", article), equipment = selectedValues(".equipment-select", article);
     if (!mold) {
       clearDropdown(process); setDropdownDisabled(process, true);
@@ -236,13 +236,13 @@
     var timeInput = article.querySelector(".time-input");
     function changeTime(delta) {
       var current = Number(timeInput.value) || 30;
-      timeInput.value = String(Math.min(1440, Math.max(10, current + delta)));
+      timeInput.value = String(Math.min(CONFIG.MAX_TASK_MINUTES, Math.max(10, current + delta)));
       updateTotalMinutes(); 
     }
     function normalizeTime() {
       var minutes = Number(timeInput.value);
       if (!Number.isFinite(minutes)) minutes = 10;
-      timeInput.value = String(Math.min(1440, Math.max(10, Math.round(minutes / 10) * 10)));
+      timeInput.value = String(Math.min(CONFIG.MAX_TASK_MINUTES, Math.max(10, Math.round(minutes / 10) * 10)));
       updateTotalMinutes(); 
     }
     article.querySelector(".time-minus").addEventListener("click", function () { changeTime(-10); });
@@ -250,11 +250,9 @@
     timeInput.addEventListener("input", function () { updateTotalMinutes(); });
     timeInput.addEventListener("change", normalizeTime);
     var categoryInput = article.querySelector(".category-select");
-    categoryInput.addEventListener("focus", function () { restoreSelectLabels(categoryInput); });
-    categoryInput.addEventListener("blur", function () { compactSelectValue(categoryInput); });
     categoryInput.addEventListener("change", function () {
       renderCodeOptions(article, selectedValues(".code-select", article));
-      compactSelectValue(categoryInput);
+      applyClassificationMode(article);
       
     });
     article.querySelector(".remark-input").addEventListener("input",function (event) { article.querySelector(".remark-count").textContent = event.target.value.length + "/240"; });
@@ -281,7 +279,7 @@
 
   function updateTaskSummary(article) {
     var mold = article.querySelector(".mold-input").value, processes = selectedValues(".process-select",article), codes = selectedValues(".code-select",article);
-    var category = article.querySelector(".category-select").value, minutes = Number(article.querySelector(".time-input").value);
+    var category = categoryValue(article), minutes = Number(article.querySelector(".time-input").value);
     var parts = [mold ? mold + (processes.length ? "-" + processes.join(",") : "") : "미등록 작업"];
     if (category) parts.push(category + (codes.length ? " / " + codes.join(",") : ""));
     parts.push(Number.isFinite(minutes) && minutes > 0 ? formatWorkMinutes(minutes) : "시간 미입력");
@@ -328,15 +326,14 @@
     clearValidationState(); var errors = [], firstInvalid = null;
     [workDateInput,departmentInput,teamInput,workerNameInput,employeeIdInput].forEach(function (input) { if (!input.value || !input.checkValidity()) { markInvalid(input); errors.push("작업자 필수 정보를 확인해 주세요."); firstInvalid = firstInvalid || input; } });
     Array.from(taskList.querySelectorAll(".task-card")).forEach(function (article,index) {
-      var n = index + 1, moldInput = article.querySelector(".mold-input"), mold = moldInput.value, category = article.querySelector(".category-select"), code = article.querySelector(".code-select"), time = article.querySelector(".time-input"), state = taskStates.get(article);
+      var n = index + 1, moldInput = article.querySelector(".mold-input"), mold = moldInput.value, category = article.querySelector(".category-select button"), cat = categoryValue(article), code = article.querySelector(".code-select"), time = article.querySelector(".time-input"), state = taskStates.get(article);
       if (mold && !/^[0-9]{5}$/.test(mold)) { markInvalid(moldInput); errors.push("작업 " + n + "의 금형번호를 숫자 5자리로 입력해 주세요."); firstInvalid = firstInvalid || moldInput; }
       else if (mold && state.lookupState !== "found") { markInvalid(moldInput); errors.push("작업 " + n + "의 금형 조회 결과를 확인해 주세요."); firstInvalid = firstInvalid || moldInput; }
-      if (!mold && category.value !== "H") { markInvalid(category); errors.push("작업 " + n + "은 금형번호가 없어 작업구분을 기타로 선택해야 합니다."); firstInvalid = firstInvalid || category; }
-      if (!category.value) { markInvalid(category); errors.push("작업 " + n + "의 작업구분을 선택해 주세요."); firstInvalid = firstInvalid || category; }
+      if (!mold && cat !== "H") { markInvalid(category); errors.push("작업 " + n + "은 금형번호가 없어 작업구분을 기타로 선택해야 합니다."); firstInvalid = firstInvalid || category; }
+      if (!cat) { markInvalid(category); errors.push("작업 " + n + "의 작업구분을 선택해 주세요."); firstInvalid = firstInvalid || category; }
       if (!selectedValues(".code-select",article).length) { markInvalid(code); errors.push("작업 " + n + "의 작업코드를 하나 이상 선택해 주세요."); firstInvalid = firstInvalid || code.querySelector(".multi-dropdown-toggle"); }
-      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 10 || minutes > 1440 || minutes % 10 !== 0) { markInvalid(time); errors.push("작업 " + n + "의 시간은 10분 단위로 입력해 주세요."); firstInvalid = firstInvalid || time; }
+      var minutes = Number(time.value); if (!Number.isInteger(minutes) || minutes < 10 || minutes > CONFIG.MAX_TASK_MINUTES || minutes % 10 !== 0) { markInvalid(time); errors.push("작업 " + n + "의 시간은 10~5,000분 범위에서 10분 단위로 입력해 주세요."); firstInvalid = firstInvalid || time; }
     });
-    if (updateTotalMinutes() > Number(CONFIG.MAX_TOTAL_MINUTES || 1440)) { errors.push("이번 등록의 총 작업시간은 1,440분을 넘을 수 없습니다."); firstInvalid = firstInvalid || taskList.querySelector(".time-input"); }
     if (!errors.length) return true;
     showStatus(errors[0] + (errors.length > 1 ? " 외 " + (errors.length - 1) + "건을 확인해 주세요." : ""),"error"); focusStatus();
     if (firstInvalid) {
@@ -351,7 +348,7 @@
       return {
         mold:article.querySelector(".mold-input").value || null,
         processes:selectedValues(".process-select",article),
-        cat:article.querySelector(".category-select").value,
+        cat:categoryValue(article),
         codes:selectedValues(".code-select",article),
         classification:selectedValues(".classification-select",article),
         equipment:selectedValues(".equipment-select",article),
@@ -360,8 +357,9 @@
       };
     });
   }
-  function submitRows(rows) {
+  function submitRows(rows, overtimeConfirmed) {
     var payload = { submission_id:submissionId, date:workDateInput.value, tasks:rows };
+    if (overtimeConfirmed) payload.overtime_confirmed = true;
     return proxyMode ? WorklogSecurity.api("/api/admin-submit", {employee_no:currentWorker.employee_no,payload:payload}) : WorklogSecurity.api("/api/submit",payload);
   }
 
@@ -439,13 +437,27 @@
     viewToggle.setAttribute("aria-label", showLookup ? "작업일보 작성 화면으로 전환" : "작업 조회 화면으로 전환");
     window.scrollTo({top:0,behavior:"smooth"});
   }
-  function setSubmitting(value) { isSubmitting = value; document.getElementById("proxyEmployee").disabled = value; submitButton.classList.toggle("is-loading",value); submitButton.disabled = value || !navigator.onLine; submitButtonLabel.textContent = value ? "등록 중" : "작업일보 등록"; }
+  function setSubmitting(value) { isSubmitting = value; taskList.inert = value; workDateInput.disabled = value; addTaskBottom.disabled = value || taskList.children.length >= CONFIG.MAX_TASKS; document.getElementById("proxyEmployee").disabled = value; submitButton.classList.toggle("is-loading",value); submitButton.disabled = value || !navigator.onLine; submitButtonLabel.textContent = value ? "등록 중" : "작업일보 등록"; }
   function resetTasksAfterSuccess() { taskStates.forEach(function (state) { window.clearTimeout(state.lookupTimer); }); taskStates.clear(); taskList.replaceChildren(); submissionId = createSubmissionId(); createTask(); hideConflictAction(); }
+  function confirmOvertime(total) {
+    var dialog = document.getElementById("overtimeDialog");
+    document.getElementById("overtimeTotal").textContent = "등록 합계 " + total.toLocaleString("ko-KR") + "분";
+    return new Promise(function(resolve) {
+      dialog.returnValue = "no";
+      dialog.addEventListener("close", function() { resolve(dialog.returnValue === "yes"); }, {once:true});
+      dialog.showModal();
+    });
+  }
   async function handleSubmit(event) {
     event.preventDefault(); if (isSubmitting) return; hideConflictAction(); if (!navigator.onLine) { showStatus("오프라인 상태입니다. 온라인 연결 후 등록해 주세요.","error"); focusStatus(); return; } if (!validateForm()) return;
-    var rows = buildRows(), total = updateTotalMinutes(); setSubmitting(true); showStatus(rows.length + "개 작업을 등록하는 중입니다.","info");
-    try { await submitRows(rows); resetTasksAfterSuccess(); showStatus(rows.length + "개 작업, 총 " + total + "분이 등록되었습니다.","success"); focusStatus(); if (navigator.vibrate) navigator.vibrate(35); }
-    catch (error) { var conflict = Boolean(error.code === "CONFLICT"), message = error.name === "AbortError" ? "응답 시간이 초과되었습니다. 입력값을 바꾸지 말고 다시 등록해 주세요." : error.status ? error.message : "연결 응답을 확인하지 못했습니다. 연결 후 다시 등록해 주세요."; showStatus(message,"error"); conflictAction.hidden = !conflict; focusStatus(); console.error("Worklog submission failed",{status:error.status || null,code:error.payload && error.payload.code ? error.payload.code : null}); }
+    var rows = buildRows(), total = updateTotalMinutes(); setSubmitting(true);
+    try {
+      var overtime = total > CONFIG.REGULAR_MINUTES;
+      if (overtime && !await confirmOvertime(total)) { hideStatus(); return; }
+      showStatus(rows.length + "개 작업을 등록하는 중입니다.","info");
+      await submitRows(rows, overtime); resetTasksAfterSuccess(); showStatus(rows.length + "개 작업, 총 " + total + "분이 등록되었습니다.","success"); focusStatus(); if (navigator.vibrate) navigator.vibrate(35);
+    }
+    catch (error) { var conflict = Boolean(error.code === "CONFLICT"), message = error.name === "AbortError" ? "응답 시간이 초과되었습니다. 입력값을 바꾸지 말고 다시 등록해 주세요." : error.status ? error.message : "연결 응답을 확인하지 못했습니다. 연결 후 다시 등록해 주세요."; showStatus(message,"error"); conflictAction.hidden = !conflict; focusStatus(); console.error("Worklog submission failed",{status:error.status || null,code:error.code || null}); }
     finally { setSubmitting(false); }
   }
 
@@ -461,6 +473,7 @@
         var options = await WorklogSecurity.api(proxyMode ? "/api/admin-options" : "/api/options", proxyMode ? {employee_no:worker.employee_no} : {});
         CATEGORY_OPTIONS[worker.department] = options.categories;
         CODE_OPTIONS[worker.department] = options.codes;
+        OTHER_CODE_OPTIONS[worker.department] = options.other_codes;
         EQUIPMENT_OPTIONS[worker.department] = options.equipment;
         CLASSIFICATION_OPTIONS = options.classifications;
       }

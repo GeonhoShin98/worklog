@@ -1000,7 +1000,7 @@ select[multiple] option {
   font-size: 13px;
 }
 
-.task-classification-row .category-select {
+ .task-classification-row select.category-select {
   height: 50px;
 }
 
@@ -1446,7 +1446,7 @@ select[multiple] option {
   grid-template-rows: 36px auto;
 }
 
-.task-classification-row .category-select {
+ .task-classification-row select.category-select {
   height: 48px;
 }
 
@@ -1520,7 +1520,7 @@ select[multiple] option {
     grid-template-rows: 40px auto;
   }
 
-  .task-classification-row .category-select {
+   .task-classification-row select.category-select {
     height: 46px;
   }
 
@@ -1670,7 +1670,7 @@ select[multiple] option {
   .task-card select,
   .task-card textarea,
   .multi-dropdown-toggle,
-  .task-classification-row .category-select {
+   .task-classification-row select.category-select {
     height: 44px;
     min-height: 44px;
     font-size: 13px;
@@ -1887,7 +1887,7 @@ select[multiple] option {
     gap: 12px 10px;
   }
   .task-classification-row .field-group { grid-template-rows: 30px 48px; }
-  .task-classification-row .category-select { height: 48px; padding: 0 8px; }
+   .task-classification-row select.category-select { height: 48px; padding: 0 8px; }
   .task-two-column { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .task-card .multi-dropdown-menu {
     left: 0;
@@ -1978,3 +1978,15 @@ select[multiple] option {
  .auth-shell { margin:3vh auto; padding:20px; }
 }
 
+
+/* Single-category popup and explicit overtime confirmation. */
+.category-select .multi-dropdown-option input { border-radius:50%; }
+.confirm-dialog { width:min(440px,calc(100% - 32px)); padding:26px; border:0; border-radius:16px; color:var(--ink); box-shadow:0 16px 60px #10223d40; }
+.confirm-dialog::backdrop { background:rgb(15 32 53 / 55%); }
+.confirm-dialog h2 { margin:0; font-size:22px; line-height:1.5; }
+.confirm-dialog p { margin:16px 0 22px; font-size:18px; }
+.confirm-actions,.defer-actions { display:flex; gap:10px; }
+.confirm-actions button,.defer-actions button { flex:1; }
+.defer-actions { margin:0 0 20px; flex-wrap:wrap; }
+.defer-actions button { min-width:150px; }
+@media(min-width:1281px) { .time-stepper { grid-template-columns:24px minmax(60px,1fr) 24px; } .time-stepper .time-input { padding:0 2px; } }

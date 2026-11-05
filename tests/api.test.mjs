@@ -59,7 +59,7 @@ test('administrator access, delegated author, account management and alphanumeri
   assert.equal((await send('admin-reset',{employee_no:EMP1,current_password:PERSONAL},admin)).statusCode,200);
   const reset=getCookie(await send('login',{employee_no:EMP1,pin:EMP1}));
   assert.equal(JSON.parse((await send('me',{},reset)).body).must_change_pin,true);
-  for(const invalid of ['12345678','OnlyLetters','bad!1234','한글Test12','a'.repeat(32)+'1'])assert.equal((await send('pin',{current_pin:EMP1,new_pin:invalid},reset)).statusCode,400);
+  for(const invalid of ['1234567',EMP1,'OnlyLetters','bad!1234','한글Test12','a'.repeat(32)+'1'])assert.equal((await send('pin',{current_pin:EMP1,new_pin:invalid},reset)).statusCode,400);
   assert.equal((await send('pin',{current_pin:EMP1,new_pin:'NewWorker123'},reset)).statusCode,200);
   assert.equal((await send('login',{employee_no:EMP1,pin:'NewWorker123'})).statusCode,200);
   assert.equal((await send('login',{employee_no:EMP1,pin:'NewWorker123!'})).statusCode,401);
@@ -108,7 +108,7 @@ test("DB permissions + real PostgreSQL validation + HTTP auth lifecycle",async t
   assert.equal(old.rows.length,0);
  });
  await t.test("unauthenticated API, CSRF, malformed data fail closed",async()=>{
-  for(const action of ["me","mold","options","summary","submit","pin"]) assert.equal((await send(action,{}, "")).statusCode,401);
+  for(const action of ["me","mold","options","summary","submit","pin","pin-defer"]) assert.equal((await send(action,{}, "")).statusCode,401);
   assert.equal((await send("login",{employee_no:EMP1,pin:INITIAL},"",{origin:"https://evil.example"})).statusCode,403);
   assert.equal((await send("login",{},"",{"sec-fetch-site":"cross-site"})).statusCode,403);
   assert.equal((await api({...event("login"),body:"{"})).statusCode,400);
@@ -131,7 +131,7 @@ test("DB permissions + real PostgreSQL validation + HTTP auth lifecycle",async t
  });
  await t.test("PIN change verifies current PIN, ends old sessions, requires new PIN",async()=>{
   assert.equal((await send("pin",{current_pin:"00000000",new_pin:PERSONAL})).statusCode,400);
-  assert.equal((await send("pin",{current_pin:INITIAL,new_pin:"12345678"})).statusCode,400);
+  assert.equal((await send("pin",{current_pin:INITIAL,new_pin:INITIAL})).statusCode,400);
   assert.equal((await send("pin",{current_pin:INITIAL,new_pin:PERSONAL})).statusCode,200);
   assert.equal((await send("me")).statusCode,401);
   const res=await send("login",{employee_no:EMP1,pin:PERSONAL},"");c1=getCookie(res);
@@ -171,11 +171,26 @@ test("DB permissions + real PostgreSQL validation + HTTP auth lifecycle",async t
   }
   assert.equal((await f.db.query("select count(*)::int n from public.worklog")).rows[0].n,1);
  });
- await t.test("H only numeric codes; per-day cap across batches; replay cannot add rows",async()=>{
-   const data=batch();data.tasks=[{...task(),mold:null,processes:[],cat:"H",codes:["1"],time:1410}];
+ await t.test("H permits W and numeric codes, disallows classification; 5000-minute limit and overtime acknowledgement",async()=>{
+   const h={...task(),mold:null,processes:[],cat:"H",codes:["W","1"],time:5000};
+   const data={...batch(),tasks:[h],overtime_confirmed:true};
    assert.equal((await send("submit",data)).statusCode,200);
-   assert.equal((await send("submit",batch())).statusCode,400);
-   assert.equal((await f.db.query("select sum(time)::int n from public.worklog")).rows[0].n,1440);
+   assert.equal(JSON.parse((await send("submit",data)).body).duplicate,true);
+   assert.equal((await send("submit",{...batch(),tasks:[{...h,time:5010}],overtime_confirmed:true})).statusCode,400);
+   assert.equal((await send("submit",{...batch(),tasks:[{...h,time:10,classification:["1"]}]})).statusCode,400);
+   assert.equal((await send("submit",{...batch(),tasks:[{...h,time:10,codes:["F"]}]})).statusCode,400);
+   assert.equal((await send("submit",{...batch(),tasks:[{...h,time:540}]})).statusCode,200);
+   for(const confirmation of [undefined,false,"true",1]) {
+    const b={...batch(),tasks:[{...h,time:550}]};if(confirmation!==undefined)b.overtime_confirmed=confirmation;
+    assert.equal((await send("submit",b)).statusCode,typeof confirmation==='string'||typeof confirmation==='number'?400:409);
+   }
+   const rejected={...batch(),tasks:[{...h,time:270},{...h,time:280}]};
+   const response=await send("submit",rejected);assert.equal(response.statusCode,409);assert.equal(JSON.parse(response.body).code,"OVERTIME_CONFIRMATION_REQUIRED");
+   assert.equal((await f.db.query("select count(*)::int n from public.worklog where submission_id=$1",[rejected.submission_id])).rows[0].n,0);
+   assert.equal((await send("submit",{...rejected,overtime_confirmed:true})).statusCode,200);
+   assert.equal((await send("submit",{...batch(),tasks:Array.from({length:10},()=>({...h})),overtime_confirmed:true})).statusCode,200);
+   assert.equal((await send("submit",{...batch(),tasks:[{...h,time:10,codes:["W"]}]},c2)).statusCode,200);
+   for(const c of [c1,c2]) assert.deepEqual(JSON.parse((await send("options",{},c)).body).other_codes.find(v=>v[0]==='W'),['W','작업지시']);
  });
  await t.test("database denies inactive workers and admin reset invalidates sessions",async()=>{
   await f.rpc("wl_admin_prepare_reset",{_number:EMP1});

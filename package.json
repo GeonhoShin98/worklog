@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tests/api.test.mjs"
+    "test": "node --test tests/api.test.mjs tests/workflow.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14"

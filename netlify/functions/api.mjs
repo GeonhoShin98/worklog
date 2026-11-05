@@ -33,7 +33,7 @@ function cookie(value,maxAge) {
 }
 function validPin(pin, employee="") {
   return typeof pin==="string" && /^[A-Za-z0-9]{8,32}$/.test(pin) &&
-    /[A-Za-z]/.test(pin) && /[0-9]/.test(pin) && pin!==employee;
+    /[0-9]/.test(pin) && pin!==employee;
 }
 const textError = (status,code,message) => new Failure(status,code,message);
 export function createHandler({ env=process.env, request=fetch }={}) {
@@ -65,6 +65,7 @@ export function createHandler({ env=process.env, request=fetch }={}) {
           if(payload.code==="P1001") throw deny();
           if(payload.code==="P1002") throw textError(403,"PIN_REQUIRED","초기 비밀번호를 먼저 변경하세요.");
           if(payload.code==="P1004") throw textError(403,"ADMIN_REQUIRED","관리자 권한이 필요합니다.");
+          if(payload.code==="P1005") throw textError(409,"OVERTIME_CONFIRMATION_REQUIRED","정규 근무 시간을 초과합니다. 등록하시겠습니까?");
           if(payload.code==="P1003") throw textError(409,"CONFLICT","같은 제출 번호의 내용이 다릅니다. 기존 등록을 확인하세요.");
           if(payload.code==="22023" || payload.code==="23514") throw textError(400,"VALIDATION","입력값을 확인하세요. 금형·작업코드·시간 또는 날짜가 올바르지 않습니다.");
           throw textError(502,"UPSTREAM","요청을 처리하지 못했습니다. 관리자에게 문의하세요.");
@@ -126,11 +127,15 @@ export function createHandler({ env=process.env, request=fetch }={}) {
       catch(error) { if(error.status===503) throw error; throw deny(); }
       if(user.id!==session.uid) throw deny();
       if(action==="me") return reply(200,profile);
+      if(action==="pin-defer") {
+        if(!["next_login","30_days"].includes(input.mode)) throw textError(400,"VALIDATION","변경 안내 시점을 선택하세요.");
+        return reply(200,await rpc("wl_defer_pin_change",{_session:session.sid,_user:session.uid,_mode:input.mode}));
+      }
       if(action==="pin") {
         await limit("pin",session.uid,8);
         if(!validPin(input.new_pin,profile.employee_no) || input.new_pin===input.current_pin ||
            typeof input.current_pin!=="string" || !/^[A-Za-z0-9]{8,32}$/.test(input.current_pin))
-          throw textError(400,"PIN_INVALID","새 비밀번호는 영문과 숫자를 모두 포함한 8~32자리이며 현재 비밀번호와 달라야 합니다.");
+          throw textError(400,"PIN_INVALID","새 비밀번호는 숫자 또는 영문+숫자 8~32자리이며 사번·현재 비밀번호와 달라야 합니다.");
         let verified;
         try { verified=await upstream("/auth/v1/token?grant_type=password",{email:user.email,password:input.current_pin}); }
         catch { throw textError(400,"PIN_INVALID","현재 비밀번호를 확인하세요."); }

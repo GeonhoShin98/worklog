@@ -237,9 +237,10 @@
           <div class="task-classification-row" aria-label="작업 구분 정보">
             <div class="field-group">
               <label class="category-label">작업구분 <span aria-hidden="true">*</span></label>
-              <select class="category-select" required>
-                <option value="">선택</option>
-              </select>
+              <div class="multi-dropdown category-select" data-placeholder="선택" data-single="true">
+                <button type="button" class="multi-dropdown-toggle" aria-expanded="false">선택</button>
+                <div class="multi-dropdown-menu" role="radiogroup" aria-label="작업구분 (한 개 선택)" hidden></div>
+              </div>
             </div>
 
             <div class="field-group">
@@ -272,7 +273,7 @@
               <label class="time-label">시간(분) <span aria-hidden="true">*</span></label>
               <div class="time-stepper" aria-label="10분 단위 시간 조절">
                 <button type="button" class="time-minus" aria-label="10분 감소">−</button>
-                <input class="time-input" type="number" inputmode="numeric" min="10" max="1440" step="10" value="30" required>
+                <input class="time-input" type="number" inputmode="numeric" min="10" max="5000" step="10" value="30" required>
                 <button type="button" class="time-plus" aria-label="10분 증가">＋</button>
               </div>
             </div>
@@ -296,5 +297,13 @@
     <footer class="site-footer">
       <p>등록 완료 안내가 표시될 때까지 화면을 닫지 마세요.</p>
     </footer>
+  <dialog id="overtimeDialog" class="confirm-dialog" aria-labelledby="overtimeTitle" aria-describedby="overtimeTotal">
+      <h2 id="overtimeTitle">정규 근무 시간을 초과합니다. 등록하시겠습니까?</h2>
+      <p id="overtimeTotal"></p>
+      <form method="dialog" class="confirm-actions">
+        <button type="submit" value="no" class="button button-secondary" autofocus>아니오</button>
+        <button type="submit" value="yes" class="button button-primary">예</button>
+      </form>
+    </dialog>
   </body>
 </html>

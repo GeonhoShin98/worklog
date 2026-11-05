@@ -10,6 +10,8 @@ export async function fixture() {
  await db.exec(migration); await db.exec(migration);
  const adminMigration=await readFile(new URL("../database/003_admin.sql",import.meta.url),"utf8");
  await db.exec(adminMigration); await db.exec(adminMigration);
+ const workflowMigration=await readFile(new URL("../database/004_workflow_update.sql",import.meta.url),"utf8");
+ await db.exec(workflowMigration); await db.exec(workflowMigration);
  await db.query("insert into auth.users values($1,$2,now()),($3,$4,now())",[U1,EMP1+"@login.example.org",U2,EMP2+"@login.example.org"]);
  await db.query("insert into wl_private.employees values($1,$2,'테스트작업자','사상반','A',true,true),($3,$4,'다른작업자','기계반','1',true,false)",[EMP1,U1,EMP2,U2]);
  await db.exec("insert into wl_private.molds values('99001','TEST CAR','TEST PART')");
