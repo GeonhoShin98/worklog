@@ -432,7 +432,7 @@
     var showLookup = lookupView.hidden;
     if (showLookup) applyIdentity();
     form.hidden = showLookup; lookupView.hidden = !showLookup; conflictAction.hidden = true; hideStatus();
-    viewToggle.textContent = showLookup ? "조회" : "일보";
+    viewToggle.textContent = showLookup ? "작업 일보" : "작업 조회";
     viewToggle.setAttribute("aria-pressed", String(showLookup));
     viewToggle.setAttribute("aria-label", showLookup ? "작업일보 작성 화면으로 전환" : "작업 조회 화면으로 전환");
     window.scrollTo({top:0,behavior:"smooth"});
