@@ -31,7 +31,7 @@ test('administrator access, delegated author, account management and alphanumeri
   await f.db.query("update wl_private.employees set must_change_pin=false where user_id=$1",[U1]);
   f.passwords.set(U1,PERSONAL);
   const worker=getCookie(await send('login',{employee_no:EMP1,pin:PERSONAL}));
-  const routes=['admin-employees','admin-report','admin-options','admin-submit','admin-molds','admin-mold-save','admin-employee-save','admin-reset'];
+  const routes=['admin-employees','admin-report','admin-options','admin-submit','admin-molds','admin-mold-save','admin-mold-replace','admin-employee-save','admin-reset'];
   for(const action of routes)assert.equal((await send(action,{},worker)).statusCode,403,action);
   await f.rpc('wl_admin_set_role',{_number:EMP2,_role:'admin'});
   let admin=getCookie(await send('login',{employee_no:EMP2,pin:PERSONAL}));
@@ -48,6 +48,9 @@ test('administrator access, delegated author, account management and alphanumeri
   assert.equal(JSON.parse((await send('admin-submit',{employee_no:EMP1,payload},admin)).body).duplicate,true);
   const work=(await f.db.query('select * from public.worklog')).rows[0];assert.equal(work.user_id,U1);assert.equal(work.entered_by,U2);assert.equal(work.name,'테스트작업자');assert.equal(work.car,'TEST CAR');
   const report=JSON.parse((await send('admin-report',{from:today,to:today,employee_no:EMP1},admin)).body);assert.equal(report.total,1);assert.equal(report.summary[0].total_minutes,30);assert.equal(report.rows[0].entered_by_name,'다른작업자');
+  assert.equal(JSON.parse((await send('admin-report',{from:today,department:'사상반'},admin)).body).total,1);
+  assert.equal(JSON.parse((await send('admin-report',{from:today,department:'기계반'},admin)).body).total,0);
+  assert.equal((await send('admin-report',{from:today,department:'관리부'},admin)).statusCode,400);
   assert.equal((await send('admin-submit',{employee_no:EMP1,payload:{...payload,submission_id:randomUUID(),name:'FORGED'}},admin)).statusCode,400);
   const saved={employee_no:EMP1,name:'변경직원',department:'사상반',team:'A',active:true};
   assert.equal((await send('admin-employee-save',{row:{...saved,role:'admin'}},admin)).statusCode,400);
@@ -67,6 +70,17 @@ test('administrator access, delegated author, account management and alphanumeri
   assert.equal((await send('login',{employee_no:'100000003',pin:'100000003'})).statusCode,200);
   assert.equal((await send('admin-mold-save',{row:{number:'99002',car:'CAR2',part:'PART2'}},admin)).statusCode,200);
   assert.equal(JSON.parse((await send('admin-molds',{query:'CAR2'},admin)).body).rows.length,1);
+  const fresh=[{number:'26026',car:'SX3 EV',part:'PNL UPR COVER'},{number:'26020',car:'AI4',part:'RING SUNROOF REINF'}];
+  assert.equal((await send('admin-mold-replace',{rows:[...fresh,{number:'bad',car:'X',part:'Y'}]},admin)).statusCode,400);
+  assert.equal((await f.db.query('select count(*)::int n from wl_private.molds')).rows[0].n,2);
+  const replaced=JSON.parse((await send('admin-mold-replace',{rows:fresh},admin)).body);
+  assert.equal(replaced.previous,2);assert.equal(replaced.count,2);
+  assert.deepEqual((await f.db.query('select number from wl_private.molds order by number')).rows.map(r=>r.number),['26020','26026']);
+  assert.equal((await f.db.query('select car from public.worklog')).rows[0].car,'TEST CAR');
+  assert.equal((await send('admin-mold-replace',{rows:[...fresh,fresh[0]]},admin)).statusCode,400);
+  assert.equal((await f.db.query('select count(*)::int n from wl_private.molds')).rows[0].n,2);
+  assert.equal((await send('admin-mold-save',{row:{number:'26030',car:'NEW',part:'NEW PART'}},admin)).statusCode,200);
+  assert.equal((await f.db.query('select count(*)::int n from wl_private.molds')).rows[0].n,3);
   assert.equal(JSON.parse((await send('admin-molds',{query:'\' OR true --'},admin)).body).rows.length,0);
   assert.equal((await f.db.query("select count(*)::int n from wl_private.audit where action='on_behalf_submit'")).rows[0].n,1);
   await f.db.query('update wl_private.employees set active=false where user_id=$1',[U1]);
