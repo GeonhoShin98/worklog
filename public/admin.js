@@ -44,7 +44,7 @@
   const sheet=workbook.worksheets[0];let written=0;
   function append(rows){for(const w of rows){const index=written+3,r=sheet.getRow(index),values=[
     Number(String(w.date||'').replaceAll('-','')),w.name,w.employee_no,w.swmno||'',w.car||'',w.part||'',
-    '',w.proc||'',w.cat||'',Array.isArray(w.classification)?w.classification.join(','):w.classification||'',
+    '',null,w.cat||'',Array.isArray(w.classification)?w.classification.join(','):w.classification||'',
     w.code||'',Array.isArray(w.equipment)?w.equipment.join(','):w.equipment||'',Number(w.time),'MIN'];
     for(let column=1;column<=14;column++)r.getCell(column).value=values[column-1];
     r.getCell(3).numFmt='@';r.getCell(13).numFmt='0';written++;}}
@@ -56,7 +56,7 @@
   }
   const blob=new Blob([await workbook.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='공수실적_'+filters.from.replaceAll('-','')+'_'+filters.to.replaceAll('-','')+'.xlsx';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  message('엑셀 '+written+'건을 저장했습니다. 생산오더는 작업일보에 없어 빈칸입니다.');
+  message('엑셀 '+written+'건을 저장했습니다. 생산오더와 공정은 빈칸입니다.');
  }
  async function prepareMolds(file){
   importRows=null;$('moldReplace').disabled=true;$('moldPreview').textContent='';
