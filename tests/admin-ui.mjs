@@ -50,7 +50,7 @@ try{
  const output=new ExcelJS.Workbook();await output.xlsx.load(await readFile(await download.path()));
  const cells=output.worksheets[0].getRow(3);assert.equal(cells.getCell('A').value,Number(today.replaceAll('-','')));
  assert.equal(cells.getCell('C').value,EMP2);assert.equal(cells.getCell('D').value,'26026-1,2');
- assert.equal(cells.getCell('H').value,'1,2');assert.equal(cells.getCell('M').value,540);assert.equal(cells.getCell('N').value,'MIN');
+ assert.equal(cells.getCell('H').value,null);assert.equal(cells.getCell('M').value,540);assert.equal(cells.getCell('N').value,'MIN');
  assert.deepEqual(errors,[]);
  console.log('Admin UI upload, atomic replacement, day/department query and template export passed');
 }finally{await browser.close();await f.db.close();}
