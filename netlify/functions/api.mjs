@@ -47,10 +47,10 @@ export function createHandler({ env=process.env, request=fetch }={}) {
       if(h.origin!==c.APP_ORIGIN || h["x-worklog-request"]!=="1" ||
          !/^application\/json(?:;|$)/i.test(h["content-type"]||"") ||
          (h["sec-fetch-site"] && h["sec-fetch-site"]!=="same-origin")) return reply(403,{message:"허용되지 않은 요청입니다."});
-      if(event.isBase64Encoded || Buffer.byteLength(event.body||"")>20000) return reply(413,{message:"요청 크기를 확인하세요."});
+      const action=event.path.split("/").filter(Boolean).at(-1);
+      if(event.isBase64Encoded || Buffer.byteLength(event.body||"")>(action==="admin-mold-replace"?1000000:20000)) return reply(413,{message:"요청 크기를 확인하세요."});
       let input; try { input=JSON.parse(event.body||"{}"); } catch { return reply(400,{message:"요청 형식을 확인하세요."}); }
       if(!input || Array.isArray(input) || typeof input!=="object") return reply(400,{message:"요청 형식을 확인하세요."});
-      const action=event.path.split("/").filter(Boolean).at(-1);
       async function upstream(path,body,{token,key=c.SUPABASE_PUBLISHABLE_KEY,method="POST"}={}) {
         let res;
         try {
@@ -153,9 +153,13 @@ export function createHandler({ env=process.env, request=fetch }={}) {
         if(action==="admin-employees") return reply(200,await rpc("wl_manager_employees",identity));
         if(action==="admin-options") return reply(200,await rpc("wl_manager_options",{...identity,_number:input.employee_no}));
         if(action==="admin-submit") return reply(200,await rpc("wl_manager_submit",{...identity,_number:input.employee_no,_payload:input.payload}));
-        if(action==="admin-report") return reply(200,await rpc("wl_manager_report",{...identity,_from:input.from,_to:input.to,_number:input.employee_no||null,_offset:input.offset??0}));
+        if(action==="admin-report") return reply(200,await rpc("wl_manager_report_v2",{...identity,_from:input.from,_to:input.to||input.from,_number:input.employee_no||null,_department:input.department||null,_offset:input.offset??0}));
         if(action==="admin-molds") return reply(200,await rpc("wl_manager_molds",{...identity,_query:input.query??"",_offset:input.offset??0}));
         if(action==="admin-mold-save") { await rpc("wl_manager_save_mold",{...identity,_row:input.row}); return reply(200,{ok:true}); }
+        if(action==="admin-mold-replace") {
+          if(!Array.isArray(input.rows) || input.rows.length<1 || input.rows.length>5000) throw textError(400,"VALIDATION","금형 자료 건수를 확인하세요.");
+          return reply(200,await rpc("wl_manager_replace_molds",{...identity,_rows:input.rows}));
+        }
         async function provision(row) {
           const number=row.employee_no;
           if(!/^\d{9}$/.test(number)) throw textError(400,"VALIDATION","사번을 확인하세요.");

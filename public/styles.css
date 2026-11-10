@@ -1995,3 +1995,11 @@ select[multiple] option {
 .defer-actions { margin:0 0 20px; flex-wrap:wrap; }
 .defer-actions button { min-width:150px; }
 @media(min-width:1281px) { .time-stepper { grid-template-columns:24px minmax(60px,1fr) 24px; } .time-stepper .time-input { padding:0 2px; } }
+.admin-section-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.admin-section-heading h3 { margin:0; }
+.admin-import { margin:22px 0; padding:18px; border:1px solid #b8c9dc; border-radius:10px; background:#f7faff; }
+.admin-import h3 { margin:0 0 8px; }
+.admin-import p { margin:8px 0; }
+.admin-import input[type=file] { display:block; width:100%; margin:12px 0; font:inherit; }
+.admin-import button,.admin-section-heading button { min-height:44px; }
+.admin-import #moldPreview { min-height:24px; color:#173f73; overflow-wrap:anywhere; }
